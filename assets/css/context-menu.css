@@ -1,0 +1,69 @@
+/*
+ * Copyright (C) 2026 Mahdi Hezaveh, MIT License.
+ *
+ * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
+ * Filename: context-menu.css
+ *
+ * Last Modified: Tue, 10 Feb 2026 - 17:42:27 MST (-0700)
+ *
+ * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
+ */
+
+/* Context Menu Styles */
+.context-menu {
+    position: fixed;
+    background: white;
+    border: 1px solid #dbdbdb;
+    border-radius: 4px;
+    box-shadow: 0 0.5em 1em -0.125em rgba(10, 10, 10, 0.1), 0 0px 0 1px rgba(10, 10, 10, 0.02);
+    z-index: 1000;
+    min-width: 200px;
+    display: none;
+}
+
+.context-menu.is-active {
+    display: block;
+}
+
+.context-menu-item {
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+.context-menu-item:hover {
+    background-color: #f5f5f5;
+}
+
+.context-menu-item i {
+    margin-right: 0.75rem;
+    width: 1.25rem;
+    text-align: center;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background-color: #dbdbdb;
+    margin: 0.5rem 0;
+}
+
+/* Drag and Drop Styles */
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #f5f5f5;
+}
+
+.sortable-drag {
+    opacity: 0.8;
+}
+
+.drop-zone {
+    background-color: #f0f9ff !important;
+    border: 2px dashed #3273dc !important;
+}
+
+.dragging {
+    cursor: move !important;
+}

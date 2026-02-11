@@ -1,0 +1,15 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Export-ignore (files excluded from composer package distribution)
+/.git export-ignore
+/.gitattributes export-ignore
+/.gitignore export-ignore
+/.editorconfig export-ignore
+/phpunit.xml export-ignore
+/phpunit.xml.dist export-ignore
+/tests export-ignore
+/.github export-ignore
+/docs export-ignore
+*.md export-ignore
+!README.md export-ignore

@@ -1,0 +1,34 @@
+# Deny access to sensitive files
+<Files ~ "^(config\.php|composer\.json|composer\.lock)$">
+    Order allow,deny
+    Deny from all
+</Files>
+
+# Deny access to directories
+<IfModule mod_autoindex.c>
+    Options -Indexes
+</IfModule>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+</IfModule>
+
+# PHP security settings
+<IfModule mod_php.c>
+    php_flag display_errors off
+    php_flag log_errors on
+    php_value upload_max_filesize 50M
+    php_value post_max_size 51M
+</IfModule>
+
+# Prevent access to hidden files and directories
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteCond %{SCRIPT_FILENAME} -d [OR]
+    RewriteCond %{SCRIPT_FILENAME} -f
+    RewriteRule "(^|/)\." - [F]
+</IfModule>

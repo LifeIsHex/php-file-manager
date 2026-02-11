@@ -1,0 +1,58 @@
+# Composer
+/vendor/
+composer.phar
+
+# IDE and Editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.buildpath
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# PHP
+*.log
+*.cache
+.phpunit.result.cache
+phpunit.xml
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.old
+*.orig
+
+# Environment and configuration
+.env
+.env.local
+.env.*.local
+config.local.php
+
+# Cache directories
+/cache/
+/tmp/
+/temp/
+
+# Build artifacts
+/build/
+/dist/
+
+# Session files
+/sessions/
+*.session
+
+# Upload/test directories (if applicable)
+/uploads/test/
+/test-files/

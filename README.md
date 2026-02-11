@@ -1,0 +1,224 @@
+# PHP File Manager
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![PHP Version](https://img.shields.io/badge/PHP-%3E%3D8.3-blue.svg)](https://php.net)
+[![Bulma](https://img.shields.io/badge/Bulma-CSS-00D1B2.svg)](https://bulma.io)
+
+A modern, secure, and feature-rich PHP file manager with beautiful Bulma UI. Built for standalone use or seamless integration with frameworks like CodeIgniter 4.
+
+> 🤖 **Built with [Antigravity](https://antigravity.google/)** - This project was developed using AI-assisted coding.
+
+---
+
+## ✨ Features
+
+### File Operations
+- 📁 **Browse & Navigate** - Intuitive directory browsing with breadcrumb navigation
+- ⬆️ **Upload Files** - Drag-and-drop file uploads with progress indicators
+- 📥 **Download** - Single file or multi-file download as ZIP
+- ✏️ **Rename** - Quick inline renaming
+- 🗑️ **Delete** - Single or bulk delete with confirmation modal
+- 📋 **Copy & Paste** - Clipboard operations with cut/copy/paste
+- 📦 **Compress** - Create ZIP archives from selected files
+
+### Multi-Select Operations
+- ☑️ **Checkbox Selection** - Select multiple files with checkboxes
+- 🖱️ **Shift+Click** - Range selection like native file managers
+- ⌨️ **Ctrl/Cmd+Click** - Add/remove from selection
+- 🎯 **Select All** - Quick select/deselect all items
+- 🔧 **Bulk Actions** - Cut, copy, delete, download selected files
+
+### Drag & Drop
+- 🎯 **Drag to Move** - Drag files/folders into other folders
+- 🎨 **Visual Feedback** - Drop targets highlight during drag
+- 📦 **Multi-Drag** - Select multiple items and drag them together
+- ✅ **Confirmation Modal** - Preview move operation before confirming
+
+### Preview & View
+- 🖼️ **Image Preview** - View images with dimensions
+- 📄 **Text/Code View** - Syntax-highlighted code preview
+- 📑 **PDF Viewer** - Inline PDF viewing
+- 🍎 **HEIC Support** - Apple HEIC/HEIF image preview and dimensions
+
+### Security
+- 🔐 **Authentication** - Built-in login with password hashing
+- 🛡️ **CSRF Protection** - Token-based form protection
+- 📂 **Path Validation** - Prevents directory traversal attacks
+- ⚙️ **Configurable Auth Bypass** - Optional for framework integration
+
+### Modern UI
+- 🎨 **Bulma CSS** - Clean, responsive design
+- 🌙 **Context Menu** - Right-click actions
+- 🔔 **Toast Notifications** - Non-intrusive feedback
+- 📱 **Responsive** - Works on desktop and mobile
+
+---
+
+## 📸 Screenshots
+
+<p align="center">
+  <img src="screenshots/sign-in.png" width="400" alt="sign-in.png" style="margin: 5px;">
+  <img src="screenshots/file-manager.png" width="400" alt="Screenshot 2026-02-10 at 11.46.26 AM.png" style="margin: 5px;">
+  <img src="screenshots/drag-drop.png" width="400" alt="Screenshot 2026-02-10 at 11.46.33 AM.png" style="margin: 5px;">
+  <img src="screenshots/move-multiple-file.png" width="400" alt="Screenshot 2026-02-10 at 11.46.43 AM.png" style="margin: 5px;">
+  <img src="screenshots/context-menu.png" width="400" alt="Screenshot 2026-02-10 at 11.46.48 AM.png" style="margin: 5px;">
+  <img src="screenshots/copy-move-files.png" width="400" alt="Screenshot 2026-02-10 at 11.47.23 AM.png" style="margin: 5px;">
+  <img src="screenshots/upload-files.png" width="400" alt="Screenshot 2026-02-10 at 11.48.05 AM.png" style="margin: 5px;">
+  <img src="screenshots/view-file.png" width="400" alt="Screenshot 2026-02-10 at 11.50.15 AM.png" style="margin: 5px;">
+  <img src="screenshots/zip-file.png" width="400" alt="Screenshot 2026-02-10 at 11.52.08 AM.png" style="margin: 5px;">
+  <img src="screenshots/change-permissions.png" width="400" alt="Screenshot 2026-02-10 at 11.55.34 AM.png" style="margin: 5px;">
+  <img src="screenshots/search.png" width="400" alt="Screenshot 2026-02-10 at 12.18.30 PM.png" style="margin: 5px;">
+  <img src="screenshots/delete.png" width="400" alt="Screenshot 2026-02-10 at 12.19.15 PM.png" style="margin: 5px;">
+  <img src="screenshots/rename.png" width="400" alt="Screenshot 2026-02-10 at 12.19.42 PM.png" style="margin: 5px;">
+</p>
+
+---
+
+## 🚀 Installation
+
+### Via Composer
+
+```bash
+composer require lifeishex/php-file-manager
+```
+
+### Manual Installation
+
+1. Clone or download the repository
+2. Copy files to your project
+3. Configure `config.php`
+
+---
+
+## ⚙️ Configuration
+
+Create or modify `config.php`:
+
+```php
+<?php
+return [
+    'fm' => [
+        'root_path' => '/path/to/managed/files',
+        'title' => 'File Manager',
+        'language' => 'en',
+        'date_format' => 'Y-m-d H:i',
+        'show_hidden' => false,
+    ],
+    'auth' => [
+        'require_login' => true,
+        'username' => 'admin',
+        'password' => password_hash('your-password', PASSWORD_DEFAULT),
+    ],
+    'upload' => [
+        'max_file_size' => 50 * 1024 * 1024, // 50MB
+        'chunk_size' => 1 * 1024 * 1024,     // 1MB chunks
+        'allowed_extensions' => ['*'],       // All extensions
+    ],
+    'security' => [
+        'csrf_enabled' => true,
+    ],
+];
+```
+
+---
+
+## 🔧 Standalone Usage
+
+```php
+<?php
+require_once 'vendor/autoload.php';
+
+use FileManager\FileManager;
+
+$config = require 'config.php';
+$fileManager = new FileManager($config);
+$fileManager->run();
+```
+
+---
+
+## 🔌 Framework Integration
+
+### CodeIgniter 4
+
+```php
+<?php
+// app/Controllers/FileManagerController.php
+namespace App\Controllers;
+
+use FileManager\Integration\FileManagerService;
+
+class FileManagerController extends BaseController
+{
+    public function index()
+    {
+        $config = [
+            'fm' => [
+                'root_path' => WRITEPATH . 'uploads',
+                'asset_path' => '/filemanager/assets',
+            ],
+            'auth' => [
+                'require_login' => false, // Use CI4's auth
+            ],
+        ];
+        
+        $fileManager = new FileManagerService($config);
+        return $fileManager->handleRequest();
+    }
+}
+```
+
+### Dynamic Root Path
+
+```php
+// Per-user file management
+$config['fm']['root_path'] = WRITEPATH . 'uploads/user_' . session()->get('user_id');
+```
+
+---
+
+## 📋 Requirements
+
+- **PHP 8.3+**
+- **ext-zip** - For multi-file ZIP downloads
+- **ext-mbstring** - For proper string handling
+
+### Optional
+
+- **sips** (macOS) or **ImageMagick** - For HEIC image support
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! This is an MIT-licensed open-source project.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👤 Author
+
+**Mahdi Hezaveh**
+
+- GitHub: [@LifeIsHex](https://github.com/LifeIsHex)
+
+---
+
+## ⭐ Support
+
+If you find this project useful, please consider giving it a ⭐ on GitHub! Your support helps the project grow and motivates continued development.
+
+[![Star on GitHub](https://img.shields.io/github/stars/LifeIsHex/php-file-manager?style=social)](https://github.com/LifeIsHex/php-file-manager)
+
+---

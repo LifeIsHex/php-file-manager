@@ -1,0 +1,195 @@
+/*
+ * Copyright (C) 2026 Mahdi Hezaveh, MIT License.
+ *
+ * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
+ * Filename: custom.css
+ *
+ * Last Modified: Tue, 10 Feb 2026 - 17:43:03 MST (-0700)
+ *
+ * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
+ */
+
+/* Custom CSS for File Manager */
+
+:root {
+    --primary-color: #667eea;
+    --danger-color: #f14668;
+}
+
+/* Smooth transitions */
+.button, .file-row {
+    transition: all 0.2s ease;
+}
+
+/* File row hover effect */
+.file-row:hover {
+    background-color: #f5f5f5;
+}
+
+/* Custom file input styling */
+.file.is-boxed.is-info .file-cta {
+    background-color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+/* Modal animations */
+.modal {
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Notification animations */
+.notification {
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Table customization */
+.table thead th {
+    background-color: #f5f5f5;
+    color: #363636;
+    font-weight: 600;
+}
+
+/* Breadcrumb styling */
+.breadcrumb {
+    margin-bottom: 1.5rem;
+}
+
+.breadcrumb a {
+    color: var(--primary-color);
+}
+
+.breadcrumb li.is-active a {
+    color: #363636;
+    cursor: default;
+}
+
+/* Icon colors */
+.has-text-folder {
+    color: #ffd43b !important;
+}
+
+/* Checkbox styling */
+input[type="checkbox"] {
+    cursor: pointer;
+}
+
+/* Action buttons */
+.buttons.are-small {
+    gap: 0.25rem;
+}
+
+/* Search input */
+#searchInput {
+    min-width: 250px;
+}
+
+/* File icons spacing */
+.fas.fa-folder,
+.fas.fa-file,
+.fas.fa-file-image,
+.fas.fa-file-video,
+.fas.fa-file-audio,
+.fas.fa-file-pdf,
+.fas.fa-file-code {
+    width: 1.25rem;
+    text-align: center;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .level {
+        display: block;
+    }
+
+    .level-left, .level-right {
+        margin-bottom: 0.75rem;
+    }
+
+    #searchInput {
+        min-width: 100%;
+    }
+
+    .table {
+        font-size: 0.875rem;
+    }
+
+    .buttons.are-small .button {
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* Loading spinner */
+.button.is-loading::after {
+    border-color: transparent transparent #fff #fff !important;
+}
+
+/* Empty state */
+.has-text-grey i {
+    opacity: 0.5;
+}
+
+/* Permissions column */
+.is-family-monospace {
+    font-size: 0.75rem;
+}
+
+/* Drag and Drop Styles */
+.sortable-ghost {
+    opacity: 0.4;
+    background-color: #e3e3e3;
+}
+
+.sortable-drag {
+    background-color: #fff;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.dragging {
+    opacity: 0.5;
+}
+
+/* Drop target highlighting */
+.drop-target-available {
+    background-color: #f0fff4 !important;
+    border: 2px dashed #48c774 !important;
+}
+
+.drop-target-hover {
+    background-color: #ebffef !important;
+    border: 2px solid #48c774 !important;
+    transform: scale(1.01);
+    transition: all 0.15s ease;
+}
+
+/* Directory row cursor when dragging */
+.directory-row {
+    cursor: grab;
+}
+
+.file-row {
+    cursor: grab;
+}
+
+.file-row:active, .directory-row:active {
+    cursor: grabbing;
+}

@@ -1,0 +1,98 @@
+/*
+ * Copyright (C) 2026 Mahdi Hezaveh, MIT License.
+ *
+ * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
+ * Filename: toast.css
+ *
+ * Last Modified: Tue, 10 Feb 2026 - 17:42:55 MST (-0700)
+ *
+ * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
+ */
+
+/* Toast Notification Styles */
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideInRight 0.3s ease-out;
+    z-index: 10000;
+    min-width: 300px;
+    max-width: 500px;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 500;
+}
+
+.toast.success {
+    background: #48c774;
+    color: white;
+}
+
+.toast.error {
+    background: #f14668;
+    color: white;
+}
+
+.toast.warning {
+    background: #ffdd57;
+    color: rgba(0, 0, 0, 0.7);
+}
+
+.toast.info {
+    background: #3298dc;
+    color: white;
+}
+
+.toast-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+}
+
+.toast-close {
+    margin-left: auto;
+    background: none;
+    border: none;
+    color: inherit;
+    font-size: 1.5rem;
+    cursor: pointer;
+    opacity: 0.7;
+    padding: 0;
+    line-height: 1;
+    transition: opacity 0.2s;
+}
+
+.toast-close:hover {
+    opacity: 1;
+}
+
+@keyframes slideInRight {
+    from {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+
+    to {
+        transform: translateX(400px);
+        opacity: 0;
+    }
+}
+
+.toast.hiding {
+    animation: slideOutRight 0.3s ease-out forwards;
+}

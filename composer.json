@@ -1,0 +1,58 @@
+{
+    "name": "lifeishex/php-file-manager",
+    "description": "A modern, secure PHP file manager with Bulma UI - featuring drag-and-drop, multi-select operations, and framework integration",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "file-manager",
+        "php",
+        "bulma",
+        "file-upload",
+        "file-browser",
+        "drag-and-drop",
+        "multi-select",
+        "php8",
+        "web-file-manager",
+        "file-operations"
+    ],
+    "authors": [
+        {
+            "name": "Mahdi Hezaveh",
+            "email": "mahdi.hezaveh@icloud.com"
+        }
+    ],
+    "homepage": "https://github.com/LifeIsHex/php-file-manager",
+    "support": {
+        "issues": "https://github.com/LifeIsHex/php-file-manager/issues",
+        "source": "https://github.com/LifeIsHex/php-file-manager"
+    },
+    "require": {
+        "php": ">=8.3"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.0"
+    },
+    "suggest": {
+        "ext-imagick": "For advanced image processing",
+        "ext-zip": "Required for multi-file download as ZIP"
+    },
+    "autoload": {
+        "psr-4": {
+            "FileManager\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "FileManager\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
