@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: index.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 19:01:22 MST (-0700)
+ * Last Modified: Tue, 10 Feb 2026 - 20:00:23 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -124,184 +124,186 @@ ob_start();
             }
         </script>
 
-        <table class="table is-fullwidth is-hoverable is-striped" id="fileTable">
-            <thead>
-            <tr>
-                <th width="30">
-                    <label class="checkbox">
-                        <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
-                    </label>
-                </th>
-                <th data-sortable style="cursor: pointer;">Name</th>
-                <th data-sortable style="width: 120px; cursor: pointer;">Size</th>
-                <th data-sortable style="width: 120px; cursor: pointer;">Owner</th>
-                <th data-sortable style="width: 180px; cursor: pointer;">Modified</th>
-                <th data-sortable style="width: 100px; cursor: pointer;">Permissions</th>
-                <th style="width: 220px;">Actions</th>
-            </tr>
-            </thead>
-            <tbody>
-            <!-- Parent Directory Link -->
-            <?php if ($currentPath !== ''): ?>
+        <div class="table-container">
+            <table class="table is-fullwidth is-hoverable is-striped" id="fileTable">
+                <thead>
                 <tr>
-                    <td></td>
-                    <td colspan="6">
-                        <a href="?p=<?= urlencode(dirname($currentPath)) ?>" class="has-text-link">
-                            <i class="fas fa-level-up-alt mr-2"></i>
-                            <strong>.. (Parent Directory)</strong>
-                        </a>
-                    </td>
-                </tr>
-            <?php endif; ?>
-
-            <!-- Directories -->
-            <?php foreach ($contents['directories'] as $dir): ?>
-                <tr class="file-row directory-row" data-name="<?= Validator::escape($dir['name']) ?>">
-                    <td>
+                    <th width="30">
                         <label class="checkbox">
-                            <input type="checkbox" class="item-checkbox" value="<?= Validator::escape($dir['name']) ?>">
+                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
                         </label>
-                    </td>
-                    <td>
-                        <a href="?p=<?= urlencode($currentPath ? $currentPath . '/' . $dir['name'] : $dir['name']) ?>"
-                           class="has-text-link">
-                            <i class="fas <?= $dir['icon'] ?> mr-2 has-text-info"></i>
-                            <strong><?= Validator::escape($dir['name']) ?></strong>
-                        </a>
-                    </td>
-                    <td>-</td>
-                    <td class="has-text-grey"><?= Validator::escape($dir['owner']) ?></td>
-                    <td><?= date($config['fm']['datetime_format'] ?? 'Y-m-d H:i', $dir['modified']) ?></td>
-                    <td class="has-text-grey is-family-monospace is-size-7"><?= $dir['permissions'] ?></td>
-                    <td>
-                        <div class="buttons are-small">
-                            <?php if ($permissions->can('rename')): ?>
-                                <button class="button is-warning"
-                                        onclick="renameItem('<?= Validator::escape($dir['name']) ?>')">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('copy')): ?>
-                                <a href="?action=copy&file=<?= urlencode($dir['name']) ?>&p=<?= urlencode($currentPath) ?>"
-                                   class="button is-info" title="Copy">
-                                    <i class="fas fa-copy"></i>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('move')): ?>
-                                <a href="?action=move&file=<?= urlencode($dir['name']) ?>&p=<?= urlencode($currentPath) ?>"
-                                   class="button is-primary" title="Move">
-                                    <i class="fas fa-arrows-alt"></i>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('permissions')): ?>
-                                <button class="button is-info"
-                                        onclick="changePermissions('<?= Validator::escape($dir['name']) ?>', '<?= $dir['permissions'] ?>')">
-                                    <i class="fas fa-lock"></i>
-                                </button>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('download')): ?>
-                                <a href="?action=download&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($dir['name']) ?>"
-                                   class="button is-info" title="Download as ZIP">
-                                    <i class="fas fa-download"></i>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('delete')): ?>
-                                <button class="button is-danger" onclick="deleteItem('<?= Validator::escape($dir['name']) ?>')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            <?php endif; ?>
-                        </div>
-                    </td>
+                    </th>
+                    <th data-sortable style="cursor: pointer;">Name</th>
+                    <th data-sortable style="width: 120px; cursor: pointer;">Size</th>
+                    <th class="is-hidden-mobile" data-sortable style="width: 120px; cursor: pointer;">Owner</th>
+                    <th data-sortable style="width: 180px; cursor: pointer;">Modified</th>
+                    <th class="is-hidden-mobile" data-sortable style="width: 100px; cursor: pointer;">Permissions</th>
+                    <th style="width: 220px;">Actions</th>
                 </tr>
-            <?php endforeach; ?>
+                </thead>
+                <tbody>
+                <!-- Parent Directory Link -->
+                <?php if ($currentPath !== ''): ?>
+                    <tr>
+                        <td></td>
+                        <td colspan="6">
+                            <a href="?p=<?= urlencode(dirname($currentPath)) ?>" class="has-text-link">
+                                <i class="fas fa-level-up-alt mr-2"></i>
+                                <strong>.. (Parent Directory)</strong>
+                            </a>
+                        </td>
+                    </tr>
+                <?php endif; ?>
 
-            <!-- Files -->
-            <?php foreach ($contents['files'] as $file): ?>
-                <tr class="file-row" data-name="<?= Validator::escape($file['name']) ?>">
-                    <td>
-                        <label class="checkbox">
-                            <input type="checkbox" class="item-checkbox" value="<?= Validator::escape($file['name']) ?>">
-                        </label>
-                    </td>
-                    <td>
-                        <i class="fas <?= $file['icon'] ?> mr-2"></i>
-                        <?= Validator::escape($file['name']) ?>
-                    </td>
-                    <td><?= $file['size_formatted'] ?></td>
-                    <td class="has-text-grey"><?= Validator::escape($file['owner']) ?></td>
-                    <td><?= date($config['fm']['datetime_format'] ?? 'Y-m-d H:i', $file['modified']) ?></td>
-                    <td class="has-text-grey is-family-monospace is-size-7"><?= $file['permissions'] ?></td>
-                    <td>
-                        <div class="buttons are-small">
-                            <?php if ($permissions->can('extract') && in_array(strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)), ['zip'])): ?>
-                                <button class="button is-link"
-                                        onclick="showExtractModal('<?= Validator::escape($file['name']) ?>')" title="Extract">
-                                    <i class="fas fa-file-zipper"></i>
-                                </button>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('view_pdf') && str_ends_with(strtolower($file['name']), '.pdf')): ?>
-                                <a href="?action=view-pdf&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($file['name']) ?>"
-                                   class="button is-danger" target="_blank" title="View PDF in Browser">
-                                    <i class="fas fa-file-pdf"></i>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('view')): ?>
-                                <a href="?action=view&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($file['name']) ?>"
-                                   class="button is-success">
-                                    <i class="fas fa-eye"></i>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('download')): ?>
-                                <a href="?action=download&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($file['name']) ?>"
-                                   class="button is-info">
-                                    <i class="fas fa-download"></i>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('rename')): ?>
-                                <button class="button is-warning"
-                                        onclick="renameItem('<?= Validator::escape($file['name']) ?>')">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('copy')): ?>
-                                <a href="?action=copy&file=<?= urlencode($file['name']) ?>&p=<?= urlencode($currentPath) ?>"
-                                   class="button is-info" title="Copy">
-                                    <i class="fas fa-copy"></i>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('move')): ?>
-                                <a href="?action=move&file=<?= urlencode($file['name']) ?>&p=<?= urlencode($currentPath) ?>"
-                                   class="button is-primary" title="Move">
-                                    <i class="fas fa-arrows-alt"></i>
-                                </a>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('permissions')): ?>
-                                <button class="button is-link"
-                                        onclick="changePermissions('<?= Validator::escape($file['name']) ?>', '<?= $file['permissions'] ?>')">
-                                    <i class="fas fa-lock"></i>
-                                </button>
-                            <?php endif; ?>
-                            <?php if ($permissions->can('delete')): ?>
-                                <button class="button is-danger"
-                                        onclick="deleteItem('<?= Validator::escape($file['name']) ?>')">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            <?php endif; ?>
-                        </div>
-                    </td>
-                </tr>
-            <?php endforeach; ?>
+                <!-- Directories -->
+                <?php foreach ($contents['directories'] as $dir): ?>
+                    <tr class="file-row directory-row" data-name="<?= Validator::escape($dir['name']) ?>">
+                        <td>
+                            <label class="checkbox">
+                                <input type="checkbox" class="item-checkbox" value="<?= Validator::escape($dir['name']) ?>">
+                            </label>
+                        </td>
+                        <td>
+                            <a href="?p=<?= urlencode($currentPath ? $currentPath . '/' . $dir['name'] : $dir['name']) ?>"
+                               class="has-text-link">
+                                <i class="fas <?= $dir['icon'] ?> mr-2 has-text-info"></i>
+                                <strong><?= Validator::escape($dir['name']) ?></strong>
+                            </a>
+                        </td>
+                        <td>-</td>
+                        <td class="has-text-grey is-hidden-mobile"><?= Validator::escape($dir['owner']) ?></td>
+                        <td><?= date($config['fm']['datetime_format'] ?? 'Y-m-d H:i', $dir['modified']) ?></td>
+                        <td class="has-text-grey is-family-monospace is-size-7 is-hidden-mobile"><?= $dir['permissions'] ?></td>
+                        <td>
+                            <div class="buttons are-small">
+                                <?php if ($permissions->can('rename')): ?>
+                                    <button class="button is-warning"
+                                            onclick="renameItem('<?= Validator::escape($dir['name']) ?>')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('copy')): ?>
+                                    <a href="?action=copy&file=<?= urlencode($dir['name']) ?>&p=<?= urlencode($currentPath) ?>"
+                                       class="button is-info" title="Copy">
+                                        <i class="fas fa-copy"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('move')): ?>
+                                    <a href="?action=move&file=<?= urlencode($dir['name']) ?>&p=<?= urlencode($currentPath) ?>"
+                                       class="button is-primary" title="Move">
+                                        <i class="fas fa-arrows-alt"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('permissions')): ?>
+                                    <button class="button is-info"
+                                            onclick="changePermissions('<?= Validator::escape($dir['name']) ?>', '<?= $dir['permissions'] ?>')">
+                                        <i class="fas fa-lock"></i>
+                                    </button>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('download')): ?>
+                                    <a href="?action=download&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($dir['name']) ?>"
+                                       class="button is-info" title="Download as ZIP">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('delete')): ?>
+                                    <button class="button is-danger" onclick="deleteItem('<?= Validator::escape($dir['name']) ?>')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
 
-            <?php if (empty($contents['directories']) && empty($contents['files'])): ?>
-                <tr>
-                    <td colspan="7" class="has-text-centered has-text-grey">
-                        <i class="fas fa-folder-open fa-2x mb-3"></i>
-                        <p>This folder is empty</p>
-                    </td>
-                </tr>
-            <?php endif; ?>
-            </tbody>
-        </table>
+                <!-- Files -->
+                <?php foreach ($contents['files'] as $file): ?>
+                    <tr class="file-row" data-name="<?= Validator::escape($file['name']) ?>">
+                        <td>
+                            <label class="checkbox">
+                                <input type="checkbox" class="item-checkbox" value="<?= Validator::escape($file['name']) ?>">
+                            </label>
+                        </td>
+                        <td>
+                            <i class="fas <?= $file['icon'] ?> mr-2"></i>
+                            <?= Validator::escape($file['name']) ?>
+                        </td>
+                        <td><?= $file['size_formatted'] ?></td>
+                        <td class="has-text-grey is-hidden-mobile"><?= Validator::escape($file['owner']) ?></td>
+                        <td><?= date($config['fm']['datetime_format'] ?? 'Y-m-d H:i', $file['modified']) ?></td>
+                        <td class="has-text-grey is-family-monospace is-size-7 is-hidden-mobile"><?= $file['permissions'] ?></td>
+                        <td>
+                            <div class="buttons are-small">
+                                <?php if ($permissions->can('extract') && in_array(strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)), ['zip'])): ?>
+                                    <button class="button is-link"
+                                            onclick="showExtractModal('<?= Validator::escape($file['name']) ?>')" title="Extract">
+                                        <i class="fas fa-file-zipper"></i>
+                                    </button>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('view_pdf') && str_ends_with(strtolower($file['name']), '.pdf')): ?>
+                                    <a href="?action=view-pdf&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($file['name']) ?>"
+                                       class="button is-danger" target="_blank" title="View PDF in Browser">
+                                        <i class="fas fa-file-pdf"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('view')): ?>
+                                    <a href="?action=view&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($file['name']) ?>"
+                                       class="button is-success">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('download')): ?>
+                                    <a href="?action=download&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($file['name']) ?>"
+                                       class="button is-info">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('rename')): ?>
+                                    <button class="button is-warning"
+                                            onclick="renameItem('<?= Validator::escape($file['name']) ?>')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('copy')): ?>
+                                    <a href="?action=copy&file=<?= urlencode($file['name']) ?>&p=<?= urlencode($currentPath) ?>"
+                                       class="button is-info" title="Copy">
+                                        <i class="fas fa-copy"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('move')): ?>
+                                    <a href="?action=move&file=<?= urlencode($file['name']) ?>&p=<?= urlencode($currentPath) ?>"
+                                       class="button is-primary" title="Move">
+                                        <i class="fas fa-arrows-alt"></i>
+                                    </a>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('permissions')): ?>
+                                    <button class="button is-link"
+                                            onclick="changePermissions('<?= Validator::escape($file['name']) ?>', '<?= $file['permissions'] ?>')">
+                                        <i class="fas fa-lock"></i>
+                                    </button>
+                                <?php endif; ?>
+                                <?php if ($permissions->can('delete')): ?>
+                                    <button class="button is-danger"
+                                            onclick="deleteItem('<?= Validator::escape($file['name']) ?>')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+
+                <?php if (empty($contents['directories']) && empty($contents['files'])): ?>
+                    <tr>
+                        <td colspan="7" class="has-text-centered has-text-grey">
+                            <i class="fas fa-folder-open fa-2x mb-3"></i>
+                            <p>This folder is empty</p>
+                        </td>
+                    </tr>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <!-- File Statistics -->
