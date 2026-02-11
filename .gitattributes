@@ -14,7 +14,11 @@
 *.md export-ignore
 !README.md export-ignore
 
-# Language stats
-/assets/** linguist-vendored
-*.css linguist-vendored
-*.js linguist-vendored
+# Language stats - Vendor 3rd party assets
+/assets/bulma/** linguist-vendored
+/assets/fonts/** linguist-vendored
+/assets/libs/** linguist-vendored
+
+# Ensure custom assets are counted
+/assets/css/** !linguist-vendored
+/assets/js/** !linguist-vendored
