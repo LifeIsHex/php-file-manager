@@ -566,7 +566,7 @@ function showCompressModal() {
     const selectedItems = Array.from(checkboxes).map(cb => cb.value);
 
     if (selectedItems.length === 0) {
-        alert('Please select at least one file or folder to compress');
+        showToast('Please select at least one file or folder to compress', 'error');
         return;
     }
 
