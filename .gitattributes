@@ -11,9 +11,7 @@
 /tests export-ignore
 /.github export-ignore
 /docs export-ignore
-*.md export-ignore
-!README.md export-ignore
-!documents/** export-ignore
+
 
 # Language stats - Vendor 3rd party assets
 /assets/bulma/** linguist-vendored
