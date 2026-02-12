@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: layout.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 18:32:35 MST (-0700)
+ * Last Modified: Wed, 11 Feb 2026 - 20:38:50 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -36,7 +36,7 @@ if ($assetsPath === '') {
 <body>
 <nav class="navbar is-dark" role="navigation" aria-label="main navigation">
     <div class="navbar-brand">
-        <a class="navbar-item" href="filemanager.php"> <!--todo: fix this-->
+        <a class="navbar-item" href="filemanager.php">
             <i class="fas fa-folder-open mr-2"></i>
             <strong><?= htmlspecialchars($config['fm']['title'] ?? 'File Manager') ?></strong>
         </a>

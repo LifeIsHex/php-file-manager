@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: index.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 20:00:23 MST (-0700)
+ * Last Modified: Wed, 11 Feb 2026 - 20:38:43 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -429,7 +429,7 @@ ob_start();
                     </div>
                 </section>
                 <footer class="modal-card-foot">
-                    <button type="submit" class="button is-primary">Create</button>
+                    <button type="submit" class="button is-primary mr-2">Create</button>
                     <button type="button" class="button" onclick="closeNewFolderModal()">Cancel</button>
                 </footer>
             </form>

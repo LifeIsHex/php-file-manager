@@ -4,7 +4,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: app.js
  *
- * Last Modified: Tue, 10 Feb 2026 - 17:43:11 MST (-0700)
+ * Last Modified: Wed, 11 Feb 2026 - 20:38:22 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -283,7 +283,7 @@ function confirmRename() {
     const newName = document.getElementById('renameNewName').value.trim();
 
     if (!newName) {
-        alert('Please enter a new name');
+        showToast('Please enter a new name', 'warning');
         return;
     }
 
@@ -551,12 +551,12 @@ function confirmPermissionChange() {
                 closePermissionsModal();
                 window.location.reload();
             } else {
-                alert('Failed to change permissions: ' + (data.message || 'Unknown error'));
+                showToast('Failed to change permissions: ' + (data.message || 'Unknown error'), 'error');
             }
         })
         .catch(error => {
             console.error('Permission change error:', error);
-            alert('Failed to change permissions');
+            showToast('Failed to change permissions', 'error');
         });
 }
 
@@ -882,7 +882,7 @@ function performCopyMove() {
     const sourcePath = currentCopyMovePath ? currentCopyMovePath + '/' + currentCopyMoveItem : currentCopyMoveItem;
 
     if (selectedDestination === sourcePath) {
-        alert('Cannot copy/move to the same location');
+        showToast('Cannot copy/move to the same location', 'warning');
         return;
     }
 
@@ -1491,41 +1491,55 @@ async function downloadSelected() {
 // ============================================
 function initKeyboardShortcuts() {
     document.addEventListener('keydown', function (e) {
-        // Don't trigger shortcuts when typing in input fields
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+        // Don't trigger when typing in text inputs/textareas
+        const isTextInput = e.target.tagName === 'TEXTAREA' ||
+            e.target.isContentEditable ||
+            (e.target.tagName === 'INPUT' && !['checkbox', 'radio', 'button', 'submit', 'reset', 'file', 'image'].includes(e.target.type));
+
+        if (isTextInput) {
             return;
         }
 
-        // Ctrl+C - Copy
-        if (e.ctrlKey && e.key === 'c') {
-            e.preventDefault();
-            copyToClipboard(null, 'copy');
+        // Only active if file list is present
+        const fileTable = document.getElementById('fileTable');
+        if (!fileTable) return;
+
+        const isCtrl = e.ctrlKey || e.metaKey;
+        const key = e.key.toLowerCase();
+
+        // Ctrl+C (Copy) or Ctrl+X (Cut)
+        if (isCtrl && (key === 'c' || key === 'x')) {
+            const selectedItems = getSelectedItems();
+
+            // Only intercept if we have items selected
+            if (selectedItems.length > 0) {
+                e.preventDefault();
+                copyToClipboard(null, key === 'x' ? 'cut' : 'copy');
+            }
+            // Otherwise let native copy happen
         }
 
-        // Ctrl+X - Cut
-        if (e.ctrlKey && e.key === 'x') {
-            e.preventDefault();
-            copyToClipboard(null, 'cut');
-        }
-
-        // Ctrl+V - Paste
-        if (e.ctrlKey && e.key === 'v') {
+        // Ctrl+V (Paste)
+        if (isCtrl && key === 'v') {
             e.preventDefault();
             pasteFromClipboard();
         }
 
         // Delete key - Delete selected
         if (e.key === 'Delete') {
-            e.preventDefault();
-            deleteSelectedItems();
+            const selectedItems = getSelectedItems();
+            if (selectedItems.length > 0) {
+                e.preventDefault();
+                deleteSelectedItems();
+            }
         }
 
         // Ctrl+A - Select all
-        if (e.ctrlKey && e.key === 'a') {
+        if (isCtrl && key === 'a') {
             e.preventDefault();
             const selectAll = document.getElementById('selectAll');
             if (selectAll) {
-                selectAll.checked = true;
+                selectAll.checked = !selectAll.checked; // Toggle instead of just set true
                 selectAll.dispatchEvent(new Event('change'));
             }
         }
