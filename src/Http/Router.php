@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Router.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 19:08:11 MST (-0700)
+ * Last Modified: Tue, 24 Feb 2026 - 11:10:54 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -537,6 +537,43 @@ class Router
         $currentPath = Validator::cleanPath($this->request->get('p', ''));
 
         $results = $this->dirManager->search($query, $currentPath);
+
+        // Strip fields for columns that are configured as hidden,
+        // so sensitive data is never sent to the client.
+        $cols = $this->config['fm']['columns'] ?? [];
+        $showSize = $cols['size'] ?? true;
+        $showOwner = $cols['owner'] ?? true;
+        $showModified = $cols['modified'] ?? true;
+        $showPermissions = $cols['permissions'] ?? true;
+
+        $hiddenFields = [];
+        if (!$showSize) {
+            $hiddenFields[] = 'size';
+            $hiddenFields[] = 'size_formatted';
+        }
+        if (!$showOwner) {
+            $hiddenFields[] = 'owner';
+        }
+        if (!$showModified) {
+            $hiddenFields[] = 'modified';
+        }
+        if (!$showPermissions) {
+            $hiddenFields[] = 'permissions';
+        }
+
+        if (!empty($hiddenFields)) {
+            $strip = static function (array $items) use ($hiddenFields): array {
+                return array_map(static function (array $item) use ($hiddenFields): array {
+                    foreach ($hiddenFields as $field) {
+                        unset($item[$field]);
+                    }
+                    return $item;
+                }, $items);
+            };
+
+            $results['directories'] = $strip($results['directories'] ?? []);
+            $results['files'] = $strip($results['files'] ?? []);
+        }
 
         header('Content-Type: application/json');
         echo json_encode($results);

@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: config.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 18:31:22 MST (-0700)
+ * Last Modified: Tue, 24 Feb 2026 - 11:11:32 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -70,6 +70,15 @@ return [
         'language' => 'en', // Language code for HTML lang attribute
         'show_hidden' => true, // Show hidden files (files starting with .)
         'datetime_format' => 'Y-m-d H:i:s', // PHP date format for file timestamps
+
+        // Table column visibility — set any to false to hide that column
+        // Note: Name, checkbox, and Actions columns are always visible
+        'columns' => [
+            'size' => true,  // File/folder size
+            'owner' => true,  // File owner (Unix user)
+            'modified' => true,  // Last modified date/time
+            'permissions' => true,  // Unix permission string (e.g. rwxr-xr-x)
+        ],
     ],
 
     // Upload Settings

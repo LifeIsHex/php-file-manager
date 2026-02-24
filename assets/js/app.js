@@ -4,7 +4,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: app.js
  *
- * Last Modified: Wed, 11 Feb 2026 - 20:38:22 MST (-0700)
+ * Last Modified: Tue, 24 Feb 2026 - 11:10:37 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -184,8 +184,9 @@ function updateSearchResults(data, query) {
     if (data.directories.length === 0 && data.files.length === 0) {
         const noResultsRow = document.createElement('tr');
         noResultsRow.className = 'file-row';
+        const cols = (window.FM_COLUMNS && window.FM_COLUMNS.total) ? window.FM_COLUMNS.total : 7;
         noResultsRow.innerHTML = `
-            <td colspan="6" class="has-text-centered has-text-grey">
+            <td colspan="${cols}" class="has-text-centered has-text-grey">
                 <i class="fas fa-search fa-2x mb-3"></i>
                 <p>No results found for "${query}"</p>
             </td>
@@ -356,6 +357,9 @@ function createSearchResultRow(item, type) {
     const params = new URLSearchParams(window.location.search);
     const currentPath = params.get('p') || '';
 
+    // Read column visibility from the PHP-emitted config (default all visible)
+    const showCols = window.FM_COLUMNS || {size: true, owner: true, modified: true, permissions: true};
+
     let checkbox = `<td><input type="checkbox" class="file-checkbox" data-name="${escapeHtml(item.name)}"></td>`;
 
     let nameCell;
@@ -380,10 +384,10 @@ function createSearchResultRow(item, type) {
         `;
     }
 
-    const sizeCell = type === 'directory' ? '<td>-</td>' : `<td>${item.size_formatted}</td>`;
-    const ownerCell = `<td class="has-text-grey">${escapeHtml(item.owner || 'unknown')}</td>`;
-    const modifiedCell = `<td>${formatDate(item.modified)}</td>`;
-    const permissionsCell = `<td class="has-text-grey is-family-monospace is-size-7">${item.permissions}</td>`;
+    const sizeCell = showCols.size ? (type === 'directory' ? '<td>-</td>' : `<td>${item.size_formatted}</td>`) : '';
+    const ownerCell = showCols.owner ? `<td class="has-text-grey">${escapeHtml(item.owner || 'unknown')}</td>` : '';
+    const modifiedCell = showCols.modified ? `<td>${formatDate(item.modified)}</td>` : '';
+    const permissionsCell = showCols.permissions ? `<td class="has-text-grey is-family-monospace is-size-7">${item.permissions}</td>` : '';
 
     let actionsCell;
     if (type === 'directory') {

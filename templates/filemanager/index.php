@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: index.php
  *
- * Last Modified: Wed, 11 Feb 2026 - 20:38:43 MST (-0700)
+ * Last Modified: Tue, 24 Feb 2026 - 11:11:19 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -16,8 +16,27 @@ $title = 'File Manager';
 $username = $this->auth->getUsername();
 $isFluid = true;
 
+// Column visibility (read from config, default all visible)
+$_cols = $config['fm']['columns'] ?? [];
+$showSize = $_cols['size'] ?? true;
+$showOwner = $_cols['owner'] ?? true;
+$showModified = $_cols['modified'] ?? true;
+$showPermissions = $_cols['permissions'] ?? true;
+// Compute total visible columns for colspan (checkbox + Name + Actions = 3 fixed)
+$_visibleCols = 3 + (int)$showSize + (int)$showOwner + (int)$showModified + (int)$showPermissions;
+
 ob_start();
 ?>
+    <!-- Column visibility flags for JS -->
+    <script>
+        window.FM_COLUMNS = {
+            size: <?= $showSize ? 'true' : 'false' ?>,
+            owner: <?= $showOwner ? 'true' : 'false' ?>,
+            modified: <?= $showModified ? 'true' : 'false' ?>,
+            permissions: <?= $showPermissions ? 'true' : 'false' ?>,
+            total: <?= $_visibleCols ?>
+        };
+    </script>
 
     <!-- Breadcrumb Navigation -->
     <nav class="breadcrumb" aria-label="breadcrumbs">
@@ -134,10 +153,18 @@ ob_start();
                         </label>
                     </th>
                     <th data-sortable style="cursor: pointer;">Name</th>
-                    <th data-sortable style="width: 120px; cursor: pointer;">Size</th>
-                    <th class="is-hidden-mobile" data-sortable style="width: 120px; cursor: pointer;">Owner</th>
-                    <th data-sortable style="width: 180px; cursor: pointer;">Modified</th>
-                    <th class="is-hidden-mobile" data-sortable style="width: 100px; cursor: pointer;">Permissions</th>
+                    <?php if ($showSize): ?>
+                        <th data-sortable style="width: 120px; cursor: pointer;">Size</th>
+                    <?php endif; ?>
+                    <?php if ($showOwner): ?>
+                        <th class="is-hidden-mobile" data-sortable style="width: 120px; cursor: pointer;">Owner</th>
+                    <?php endif; ?>
+                    <?php if ($showModified): ?>
+                        <th data-sortable style="width: 180px; cursor: pointer;">Modified</th>
+                    <?php endif; ?>
+                    <?php if ($showPermissions): ?>
+                        <th class="is-hidden-mobile" data-sortable style="width: 100px; cursor: pointer;">Permissions</th>
+                    <?php endif; ?>
                     <th style="width: 220px;">Actions</th>
                 </tr>
                 </thead>
@@ -146,7 +173,7 @@ ob_start();
                 <?php if ($currentPath !== ''): ?>
                     <tr>
                         <td></td>
-                        <td colspan="6">
+                        <td colspan="<?= $_visibleCols - 1 ?>">
                             <a href="?p=<?= urlencode(dirname($currentPath)) ?>" class="has-text-link">
                                 <i class="fas fa-level-up-alt mr-2"></i>
                                 <strong>.. (Parent Directory)</strong>
@@ -170,10 +197,18 @@ ob_start();
                                 <strong><?= Validator::escape($dir['name']) ?></strong>
                             </a>
                         </td>
-                        <td>-</td>
-                        <td class="has-text-grey is-hidden-mobile"><?= Validator::escape($dir['owner']) ?></td>
-                        <td><?= date($config['fm']['datetime_format'] ?? 'Y-m-d H:i', $dir['modified']) ?></td>
-                        <td class="has-text-grey is-family-monospace is-size-7 is-hidden-mobile"><?= $dir['permissions'] ?></td>
+                        <?php if ($showSize): ?>
+                            <td>-</td>
+                        <?php endif; ?>
+                        <?php if ($showOwner): ?>
+                            <td class="has-text-grey is-hidden-mobile"><?= Validator::escape($dir['owner']) ?></td>
+                        <?php endif; ?>
+                        <?php if ($showModified): ?>
+                            <td><?= date($config['fm']['datetime_format'] ?? 'Y-m-d H:i', $dir['modified']) ?></td>
+                        <?php endif; ?>
+                        <?php if ($showPermissions): ?>
+                            <td class="has-text-grey is-family-monospace is-size-7 is-hidden-mobile"><?= $dir['permissions'] ?></td>
+                        <?php endif; ?>
                         <td>
                             <div class="buttons are-small">
                                 <?php if ($permissions->can('rename')): ?>
@@ -228,10 +263,18 @@ ob_start();
                             <i class="fas <?= $file['icon'] ?> mr-2"></i>
                             <?= Validator::escape($file['name']) ?>
                         </td>
-                        <td><?= $file['size_formatted'] ?></td>
-                        <td class="has-text-grey is-hidden-mobile"><?= Validator::escape($file['owner']) ?></td>
-                        <td><?= date($config['fm']['datetime_format'] ?? 'Y-m-d H:i', $file['modified']) ?></td>
-                        <td class="has-text-grey is-family-monospace is-size-7 is-hidden-mobile"><?= $file['permissions'] ?></td>
+                        <?php if ($showSize): ?>
+                            <td><?= $file['size_formatted'] ?></td>
+                        <?php endif; ?>
+                        <?php if ($showOwner): ?>
+                            <td class="has-text-grey is-hidden-mobile"><?= Validator::escape($file['owner']) ?></td>
+                        <?php endif; ?>
+                        <?php if ($showModified): ?>
+                            <td><?= date($config['fm']['datetime_format'] ?? 'Y-m-d H:i', $file['modified']) ?></td>
+                        <?php endif; ?>
+                        <?php if ($showPermissions): ?>
+                            <td class="has-text-grey is-family-monospace is-size-7 is-hidden-mobile"><?= $file['permissions'] ?></td>
+                        <?php endif; ?>
                         <td>
                             <div class="buttons are-small">
                                 <?php if ($permissions->can('extract') && in_array(strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)), ['zip'])): ?>
@@ -295,7 +338,7 @@ ob_start();
 
                 <?php if (empty($contents['directories']) && empty($contents['files'])): ?>
                     <tr>
-                        <td colspan="7" class="has-text-centered has-text-grey">
+                        <td colspan="<?= $_visibleCols ?>" class="has-text-centered has-text-grey">
                             <i class="fas fa-folder-open fa-2x mb-3"></i>
                             <p>This folder is empty</p>
                         </td>
