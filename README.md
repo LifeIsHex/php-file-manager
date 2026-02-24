@@ -23,8 +23,6 @@ A modern, secure, and feature-rich PHP file manager with beautiful Bulma UI. Bui
 
 ### Multi-Select Operations
 - ☑️ **Checkbox Selection** - Select multiple files with checkboxes
-- 🖱️ **Shift+Click** - Range selection like native file managers
-- ⌨️ **Ctrl/Cmd+Click** - Add/remove from selection
 - 🎯 **Select All** - Quick select/deselect all items
 - 🔧 **Bulk Actions** - Cut, copy, delete, download selected files
 
