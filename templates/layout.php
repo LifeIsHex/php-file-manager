@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: layout.php
  *
- * Last Modified: Wed, 11 Feb 2026 - 20:38:50 MST (-0700)
+ * Last Modified: Thu, 26 Feb 2026 - 21:24:34 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -95,15 +95,17 @@ endif;
     </div>
 </section>
 
-<footer class="footer">
-    <div class="content has-text-centered">
-        <p>
-            <strong>PHP File Manager</strong> - PHP <?= PHP_VERSION ?> |
-            Built with <a href="https://bulma.io" target="_blank">Bulma</a> |
-            <a href="https://github.com/LifeIsHex/php-file-manager" target="_blank"><i class="fab fa-github"></i> GitHub</a>
-        </p
-    </div>
-</footer>
+<?php if ($config['fm']['show_footer'] ?? true): ?>
+    <footer class="footer">
+        <div class="content has-text-centered">
+            <p>
+                <strong>PHP File Manager</strong> - PHP <?= PHP_VERSION ?> |
+                Built with <a href="https://bulma.io" target="_blank">Bulma</a> |
+                <a href="https://github.com/LifeIsHex/php-file-manager" target="_blank"><i class="fab fa-github"></i> GitHub</a>
+            </p
+        </div>
+    </footer>
+<?php endif; ?>
 
 <?php
 // Flash message data for toast notifications

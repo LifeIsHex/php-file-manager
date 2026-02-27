@@ -50,6 +50,38 @@ echo password_hash('your-password', PASSWORD_ARGON2ID);
 | `language`        | `string`  | `'en'`                    | Language code for HTML `lang` attribute                                                  |
 | `show_hidden`     | `bool`    | `true`                    | Show hidden files (files starting with `.`)                                              |
 | `datetime_format` | `string`  | `'Y-m-d H:i:s'`           | PHP [date format](https://www.php.net/manual/en/datetime.format.php) for file timestamps |
+| `show_footer`     | `bool`    | `true`                    | Show the page footer. Set `false` to hide it (useful for embedded/iframe use)            |
+| `columns`         | `array`   | See below                 | Control which columns are visible in the file table — see Column Visibility section      |
+
+### Column Visibility (`fm.columns`)
+
+Controls which columns are **displayed** in the file table. This is purely cosmetic — hiding a column does not restrict any operation.
+
+| Option        | Type   | Default | Description                               |
+| ------------- | ------ | ------- | ----------------------------------------- |
+| `size`        | `bool` | `true`  | File/folder size column                   |
+| `owner`       | `bool` | `true`  | File owner (Unix user) column             |
+| `modified`    | `bool` | `true`  | Last modified date/time column            |
+| `permissions` | `bool` | `true`  | Unix permission string (e.g. `rwxr-xr-x`) |
+
+> [!IMPORTANT]
+> **`fm.columns` vs `permissions` — these are independent settings, do not confuse them.**
+>
+> | Goal | Use |
+> |------|-----|
+> | Hide the permissions *column* | `fm.columns.permissions = false` |
+> | Disallow the chmod *operation* (hide the button) | Remove `'permissions'` from the role's action list |
+>
+> Hiding `fm.columns.permissions` does **not** remove the chmod button, and does **not** break the Change Permissions modal — the modal always reads the current permission value regardless of column visibility.
+
+```php
+'columns' => [
+    'size'        => true,
+    'owner'       => true,
+    'modified'    => true,
+    'permissions' => false,  // Hides the column display only
+],
+```
 
 ### Static Mode (Default)
 
@@ -208,12 +240,19 @@ return [
         'remember_duration' => 3600,
     ],
     'fm' => [
-        'root_path' => '/var/www/html/uploads',
-        'title' => 'My File Manager',
-        'show_hidden' => false,
+        'root_path'       => '/var/www/html/uploads',
+        'title'           => 'My File Manager',
+        'show_hidden'     => false,
+        'show_footer'     => true,
+        'columns' => [
+            'size'        => true,
+            'owner'       => true,
+            'modified'    => true,
+            'permissions' => true,
+        ],
     ],
     'upload' => [
-        'max_file_size' => 100 * 1024 * 1024, // 100MB
+        'max_file_size'      => 100 * 1024 * 1024, // 100MB
         'allowed_extensions' => ['jpg', 'png', 'gif', 'pdf', 'docx', 'zip'],
     ],
     'security' => [
@@ -222,14 +261,14 @@ return [
     'permissions' => [
         'default_role' => 'editor',
         'roles' => [
-            'admin' => ['*'],
+            'admin'  => ['*'],
             'editor' => ['upload', 'download', 'delete', 'rename', 'new_folder',
                          'copy', 'move', 'view', 'view_pdf', 'extract', 'zip'],
             'viewer' => ['view', 'view_pdf', 'download'],
         ],
     ],
     'system' => [
-        'timezone' => 'America/Denver',
+        'timezone'       => 'America/Denver',
         'display_errors' => false,
     ],
     'exclude_items' => [

@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Router.php
  *
- * Last Modified: Tue, 24 Feb 2026 - 11:10:54 MST (-0700)
+ * Last Modified: Thu, 26 Feb 2026 - 21:25:10 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -540,11 +540,13 @@ class Router
 
         // Strip fields for columns that are configured as hidden,
         // so sensitive data is never sent to the client.
+        // NOTE: `permissions` is intentionally NOT stripped even when its column is hidden,
+        // because the chmod modal needs the current value regardless of column visibility.
+        // Use the PermissionManager `chmod` rule to actually restrict access to the chmod operation.
         $cols = $this->config['fm']['columns'] ?? [];
         $showSize = $cols['size'] ?? true;
         $showOwner = $cols['owner'] ?? true;
         $showModified = $cols['modified'] ?? true;
-        $showPermissions = $cols['permissions'] ?? true;
 
         $hiddenFields = [];
         if (!$showSize) {
@@ -556,9 +558,6 @@ class Router
         }
         if (!$showModified) {
             $hiddenFields[] = 'modified';
-        }
-        if (!$showPermissions) {
-            $hiddenFields[] = 'permissions';
         }
 
         if (!empty($hiddenFields)) {

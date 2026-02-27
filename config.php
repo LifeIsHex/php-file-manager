@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: config.php
  *
- * Last Modified: Tue, 24 Feb 2026 - 11:11:32 MST (-0700)
+ * Last Modified: Thu, 26 Feb 2026 - 21:01:05 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -70,13 +70,23 @@ return [
         'language' => 'en', // Language code for HTML lang attribute
         'show_hidden' => true, // Show hidden files (files starting with .)
         'datetime_format' => 'Y-m-d H:i:s', // PHP date format for file timestamps
+        'show_footer' => true, // Set false to hide the footer (useful for embedded/iframe use)
 
-        // Table column visibility — set any to false to hide that column
-        // Note: Name, checkbox, and Actions columns are always visible
+        // ─── Column Visibility ────────────────────────────────────────────────────
+        // Controls which columns are DISPLAYED in the file table. This is purely
+        // cosmetic — hiding a column does not restrict access to any operation.
+        //
+        // ⚠️  If you want to RESTRICT what users can DO (e.g. disallow chmod),
+        //     use the 'permissions' section below — NOT this section.
+        //
+        // Note: 'permissions' column can be hidden here without breaking the
+        //       "Change Permissions" modal; that modal always reads the value
+        //       regardless of column visibility. To hide the chmod button entirely,
+        //       remove 'permissions' from the role's allowed actions below.
         'columns' => [
-            'size' => true,  // File/folder size
-            'owner' => true,  // File owner (Unix user)
-            'modified' => true,  // Last modified date/time
+            'size' => true,   // File/folder size
+            'owner' => true,   // File owner (Unix user)
+            'modified' => true,   // Last modified date/time
             'permissions' => true,  // Unix permission string (e.g. rwxr-xr-x)
         ],
     ],
@@ -95,7 +105,18 @@ return [
         'login_cooldown' => 300, // Lockout duration in seconds (5 minutes)
     ],
 
-    // Permissions (Role-Based Access Control)
+    // ─── Role-Based Access Control ────────────────────────────────────────────
+    // Controls what operations each role is ALLOWED TO PERFORM.
+    // This is independent of column visibility above.
+    //
+    // Available actions: upload, download, delete, rename, new_folder, copy,
+    //                    move, view, view_pdf, extract, zip, permissions
+    //
+    // Use '*' to grant access to all actions (admin).
+    //
+    // ⚠️  To hide the "Change Permissions" button for a role, simply omit
+    //     'permissions' from that role's list. Do NOT use columns.permissions
+    //     for this — that only hides the display column.
     'permissions' => [
         'default_role' => 'admin', // Role applied when no specific role is set
         'roles' => [

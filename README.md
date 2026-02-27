@@ -97,28 +97,66 @@ Create or modify `config.php`:
 return [
     'fm' => [
         'root_path' => '/path/to/managed/files',
-        'title' => 'File Manager',
-        'language' => 'en',
+        'title'     => 'File Manager',
+        'language'  => 'en',
         'date_format' => 'Y-m-d H:i',
         'show_hidden' => false,
+
+        // Column visibility — cosmetic only, does NOT restrict operations
+        'columns' => [
+            'size'        => true,
+            'owner'       => true,
+            'modified'    => true,
+            'permissions' => true,  // Hides the column, NOT the chmod button
+        ],
     ],
     'auth' => [
         'require_login' => true,
-        'username' => 'admin',
-        'password' => password_hash('your-password', PASSWORD_DEFAULT),
+        'username'      => 'admin',
+        'password'      => password_hash('your-password', PASSWORD_DEFAULT),
     ],
     'upload' => [
-        'max_file_size' => 50 * 1024 * 1024, // 50MB
-        'chunk_size' => 1 * 1024 * 1024,     // 1MB chunks
-        'allowed_extensions' => ['*'],       // All extensions
+        'max_file_size'      => 50 * 1024 * 1024,
+        'chunk_size'         => 1 * 1024 * 1024,
+        'allowed_extensions' => ['*'],
     ],
     'security' => [
         'csrf_enabled' => true,
     ],
+
+    // Role-based access control — controls what users can DO
+    'permissions' => [
+        'default_role' => 'viewer',
+        'roles' => [
+            'admin'  => ['*'],
+            'editor' => ['upload', 'download', 'delete', 'rename', 'new_folder', 'copy', 'move', 'view', 'view_pdf', 'extract', 'zip'],
+            'viewer' => ['view', 'view_pdf', 'download'],
+        ],
+    ],
 ];
 ```
 
+### Column Visibility vs. Permissions — Key Difference
+
+> [!IMPORTANT]
+> These are two separate and independent settings. Do not confuse them.
+
+| Setting                  | Purpose            | Effect                                         |
+| ------------------------ | ------------------ | ---------------------------------------------- |
+| `fm.columns.permissions` | **Display only**   | Hides the permissions column in the file table |
+| `permissions.roles`      | **Access control** | Controls which operations a role can perform   |
+
+**Example scenarios:**
+
+- Hide the permissions column but still allow chmod →
+  set `columns.permissions = false`, keep `'permissions'` in the role's action list
+- Show the permissions column but disallow chmod →
+  set `columns.permissions = true`, remove `'permissions'` from the role's action list
+- Both hide the column AND disallow chmod →
+  set `columns.permissions = false` AND remove `'permissions'` from the role
+
 ---
+
 
 ## 🔧 Standalone Usage
 

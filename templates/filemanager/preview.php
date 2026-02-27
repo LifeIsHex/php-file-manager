@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: preview.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 18:29:27 MST (-0700)
+ * Last Modified: Thu, 26 Feb 2026 - 21:24:46 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -114,10 +114,12 @@ ob_start();
                         <th>Modified</th>
                         <td><?= date('Y-m-d H:i:s', $fileInfo['modified']) ?></td>
                     </tr>
-                    <tr>
-                        <th>Permissions</th>
-                        <td class="is-family-monospace"><?= $fileInfo['permissions'] ?></td>
-                    </tr>
+                    <?php if ($config['fm']['columns']['permissions'] ?? true): ?>
+                        <tr>
+                            <th>Permissions</th>
+                            <td class="is-family-monospace"><?= $fileInfo['permissions'] ?></td>
+                        </tr>
+                    <?php endif; ?>
                     </tbody>
                 </table>
 
