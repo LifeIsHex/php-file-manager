@@ -56,18 +56,18 @@ A modern, secure, and feature-rich PHP file manager with beautiful Bulma UI. Bui
 
 <p align="center">
   <img src="screenshots/sign-in.png" width="400" alt="sign-in.png" style="margin: 5px;">
-  <img src="screenshots/file-manager.png" width="400" alt="Screenshot 2026-02-10 at 11.46.26 AM.png" style="margin: 5px;">
-  <img src="screenshots/drag-drop.png" width="400" alt="Screenshot 2026-02-10 at 11.46.33 AM.png" style="margin: 5px;">
-  <img src="screenshots/move-multiple-file.png" width="400" alt="Screenshot 2026-02-10 at 11.46.43 AM.png" style="margin: 5px;">
-  <img src="screenshots/context-menu.png" width="400" alt="Screenshot 2026-02-10 at 11.46.48 AM.png" style="margin: 5px;">
-  <img src="screenshots/copy-move-files.png" width="400" alt="Screenshot 2026-02-10 at 11.47.23 AM.png" style="margin: 5px;">
-  <img src="screenshots/upload-files.png" width="400" alt="Screenshot 2026-02-10 at 11.48.05 AM.png" style="margin: 5px;">
-  <img src="screenshots/view-file.png" width="400" alt="Screenshot 2026-02-10 at 11.50.15 AM.png" style="margin: 5px;">
-  <img src="screenshots/zip-file.png" width="400" alt="Screenshot 2026-02-10 at 11.52.08 AM.png" style="margin: 5px;">
-  <img src="screenshots/change-permissions.png" width="400" alt="Screenshot 2026-02-10 at 11.55.34 AM.png" style="margin: 5px;">
-  <img src="screenshots/search.png" width="400" alt="Screenshot 2026-02-10 at 12.18.30 PM.png" style="margin: 5px;">
-  <img src="screenshots/delete.png" width="400" alt="Screenshot 2026-02-10 at 12.19.15 PM.png" style="margin: 5px;">
-  <img src="screenshots/rename.png" width="400" alt="Screenshot 2026-02-10 at 12.19.42 PM.png" style="margin: 5px;">
+  <img src="screenshots/file-manager.png" width="400" alt="file-manager.png" style="margin: 5px;">
+  <img src="screenshots/drag-drop.png" width="400" alt="drag-drop.png" style="margin: 5px;">
+  <img src="screenshots/move-multiple-file.png" width="400" alt="move-multiple-file.png" style="margin: 5px;">
+  <img src="screenshots/context-menu.png" width="400" alt="context-menu.png" style="margin: 5px;">
+  <img src="screenshots/copy-move-files.png" width="400" alt="copy-move-files.png" style="margin: 5px;">
+  <img src="screenshots/upload-files.png" width="400" alt="upload-files.png" style="margin: 5px;">
+  <img src="screenshots/view-file.png" width="400" alt="view-file.png" style="margin: 5px;">
+  <img src="screenshots/zip-file.png" width="400" alt="zip-file.png" style="margin: 5px;">
+  <img src="screenshots/change-permissions.png" width="400" alt="change-permissions.png" style="margin: 5px;">
+  <img src="screenshots/search.png" width="400" alt="search.png" style="margin: 5px;">
+  <img src="screenshots/delete.png" width="400" alt="delete.png" style="margin: 5px;">
+  <img src="screenshots/rename.png" width="400" alt="rename.png" style="margin: 5px;">
 </p>
 
 ---
@@ -181,9 +181,24 @@ $config['fm']['root_path'] = WRITEPATH . 'uploads/user_' . session()->get('user_
 - **ext-zip** - For multi-file ZIP downloads
 - **ext-mbstring** - For proper string handling
 
-### Optional
+### Optional: HEIC Image Support
 
-- **sips** (macOS) or **ImageMagick** - For HEIC image support
+HEIC/HEIF files (Apple format) can be previewed in the file manager if a suitable conversion tool is available on the server. The file manager detects tools automatically — no configuration needed.
+
+| Platform                  | Tool                  | Install Command                            |
+| ------------------------- | --------------------- | ------------------------------------------ |
+| **Linux (Ubuntu/Debian)** | ImageMagick + libheif | `sudo apt install imagemagick libheif-dev` |
+| **Linux (RHEL/CentOS)**   | ImageMagick + libheif | `sudo dnf install ImageMagick libheif`     |
+| **macOS**                 | `sips` (built-in)     | ✅ No install needed                        |
+| **macOS** (optional)      | ImageMagick           | `brew install imagemagick`                 |
+
+> **Note:** On Ubuntu, the default `apt install imagemagick` package (ImageMagick 6) may not include HEIC support. If HEIC conversion fails, verify with: `convert -list format | grep HEIF`
+> If not listed, install a version compiled with libheif:
+> ```bash
+> sudo apt install imagemagick libheif-dev
+> ```
+
+> **Graceful degradation:** If no HEIC tool is found, the file manager still works normally — HEIC files can still be uploaded, downloaded, renamed, and deleted. Only the inline preview will be unavailable.
 
 ---
 

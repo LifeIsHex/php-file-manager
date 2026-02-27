@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: FileOperations.php
  *
- * Last Modified: Thu, 26 Feb 2026 - 14:06:40 MST (-0700)
+ * Last Modified: Thu, 26 Feb 2026 - 20:34:28 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -1083,19 +1083,38 @@ class FileOperations
             }
         }
 
-        // Fallback to ImageMagick
-        $magickPaths = ['/opt/homebrew/bin/magick', '/usr/local/bin/magick', '/usr/bin/magick'];
+        // Fallback to ImageMagick (supports macOS Homebrew, Linux apt, and custom installs)
+        // ImageMagick 7 uses `magick`, ImageMagick 6 (Ubuntu default) uses `convert`
+        $magickPaths = [
+            '/opt/homebrew/bin/magick',  // macOS Homebrew
+            '/usr/local/bin/magick',     // macOS/Linux custom install
+            '/usr/bin/magick',           // Linux ImageMagick 7
+            '/usr/bin/convert',          // Linux ImageMagick 6 (Ubuntu apt default)
+        ];
         $magickPath = null;
         foreach ($magickPaths as $path) {
-            if (file_exists($path)) {
+            if (file_exists($path) && is_executable($path)) {
                 $magickPath = $path;
                 break;
             }
         }
 
+        // Last resort: ask the shell to find magick/convert in PATH
+        if (!$magickPath) {
+            $found = trim((string)shell_exec('which magick 2>/dev/null || which convert 2>/dev/null'));
+            if ($found && is_executable($found)) {
+                $magickPath = $found;
+            }
+        }
+
         if ($magickPath) {
+            $escapedMagick = escapeshellarg($magickPath);
             $escapedPath = escapeshellarg($filepath);
-            $output = shell_exec("{$magickPath} identify -format \"%wx%h\" {$escapedPath} 2>/dev/null");
+            // ImageMagick 6 `convert` uses the same identify syntax via `magick identify` or standalone `identify`
+            $identifyCmd = basename($magickPath) === 'convert'
+                ? escapeshellarg(dirname($magickPath) . '/identify')
+                : "{$escapedMagick} identify";
+            $output = shell_exec("{$identifyCmd} -format \"%wx%h\" {$escapedPath} 2>/dev/null");
             if ($output && preg_match('/(\d+)x(\d+)/', trim($output), $m)) {
                 return [(int)$m[1], (int)$m[2]];
             }
@@ -1132,13 +1151,27 @@ class FileOperations
             }
         }
 
-        // Fallback to ImageMagick
-        $magickPaths = ['/opt/homebrew/bin/magick', '/usr/local/bin/magick', '/usr/bin/magick'];
+        // Fallback to ImageMagick (supports macOS Homebrew, Linux apt, and custom installs)
+        // ImageMagick 7 uses `magick`, ImageMagick 6 (Ubuntu apt default) uses `convert`
+        $magickPaths = [
+            '/opt/homebrew/bin/magick',  // macOS Homebrew
+            '/usr/local/bin/magick',     // macOS/Linux custom install
+            '/usr/bin/magick',           // Linux ImageMagick 7
+            '/usr/bin/convert',          // Linux ImageMagick 6 (Ubuntu apt default)
+        ];
         $magickPath = null;
         foreach ($magickPaths as $path) {
-            if (file_exists($path)) {
+            if (file_exists($path) && is_executable($path)) {
                 $magickPath = $path;
                 break;
+            }
+        }
+
+        // Last resort: ask the shell to find magick/convert in PATH
+        if (!$magickPath) {
+            $found = trim((string)shell_exec('which magick 2>/dev/null || which convert 2>/dev/null'));
+            if ($found && is_executable($found)) {
+                $magickPath = $found;
             }
         }
 
