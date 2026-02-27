@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: FileOperations.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 19:09:24 MST (-0700)
+ * Last Modified: Thu, 26 Feb 2026 - 14:06:40 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -334,6 +334,10 @@ class FileOperations
         }
 
         if (is_dir($fullSource)) {
+            // Prevent copying a directory into itself or its own subdirectory
+            if ($this->isSubPathOf($fullDest, $fullSource)) {
+                return false;
+            }
             return $this->copyDirectory($fullSource, $fullDest);
         }
 
@@ -345,10 +349,17 @@ class FileOperations
      */
     public function move(string $sourcePath, string $destPath): bool
     {
-        if ($this->copy($sourcePath, $destPath)) {
-            $cleanSource = Validator::cleanPath($sourcePath);
-            $fullSource = $this->rootPath . DIRECTORY_SEPARATOR . $cleanSource;
+        // Guard inherited from copy(), but also check explicitly
+        $cleanSource = Validator::cleanPath($sourcePath);
+        $cleanDest = Validator::cleanPath($destPath);
+        $fullSource = $this->rootPath . DIRECTORY_SEPARATOR . $cleanSource;
+        $fullDest = $this->rootPath . DIRECTORY_SEPARATOR . $cleanDest;
 
+        if (is_dir($fullSource) && $this->isSubPathOf($fullDest, $fullSource)) {
+            return false;
+        }
+
+        if ($this->copy($sourcePath, $destPath)) {
             if (is_dir($fullSource)) {
                 return $this->deleteDirectory($fullSource);
             }
@@ -383,6 +394,11 @@ class FileOperations
      */
     private function copyDirectory(string $source, string $dest): bool
     {
+        // Safety net: prevent infinite recursion if dest is inside source
+        if ($this->isSubPathOf($dest, $source)) {
+            return false;
+        }
+
         if (!is_dir($dest)) {
             mkdir($dest, 0755, true);
         }
@@ -408,6 +424,32 @@ class FileOperations
         }
 
         return true;
+    }
+
+    /**
+     * Check if a path is the same as or a subdirectory of another path.
+     * Used to prevent copying/moving a folder into itself.
+     */
+    private function isSubPathOf(string $child, string $parent): bool
+    {
+        $realChild = realpath($child);
+        $realParent = realpath($parent);
+
+        // If child doesn't exist yet, resolve its parent directory instead
+        if ($realChild === false) {
+            $realChild = realpath(dirname($child));
+            if ($realChild === false) {
+                return false;
+            }
+            $realChild .= DIRECTORY_SEPARATOR . basename($child);
+        }
+
+        if ($realParent === false) {
+            return false;
+        }
+
+        return $realChild === $realParent
+            || str_starts_with($realChild . DIRECTORY_SEPARATOR, $realParent . DIRECTORY_SEPARATOR);
     }
 
     /**
@@ -759,6 +801,11 @@ class FileOperations
             return ['success' => false, 'message' => 'Destination directory does not exist'];
         }
 
+        // Prevent copying a directory into itself or its own subdirectory
+        if (is_dir($fullSource) && $this->isSubPathOf($fullDest, $fullSource)) {
+            return ['success' => false, 'message' => 'Cannot copy a folder into itself'];
+        }
+
         $sourceName = basename($fullSource);
         $destination = $fullDest . DIRECTORY_SEPARATOR . $sourceName;
 
@@ -809,6 +856,11 @@ class FileOperations
 
         if (!is_dir($fullDest)) {
             return ['success' => false, 'message' => 'Destination directory does not exist'];
+        }
+
+        // Prevent moving a directory into itself or its own subdirectory
+        if (is_dir($fullSource) && $this->isSubPathOf($fullDest, $fullSource)) {
+            return ['success' => false, 'message' => 'Cannot move a folder into itself'];
         }
 
         $sourceName = basename($fullSource);
