@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Router.php
  *
- * Last Modified: Thu, 26 Feb 2026 - 21:25:10 MST (-0700)
+ * Last Modified: Sat, 28 Feb 2026 - 13:06:09 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -72,6 +72,18 @@ class Router
         // Get action from request
         $action = $this->request->get('action', $this->request->post('action', 'index'));
 
+        // ── Whitelist valid actions ─────────────────────────────────────────
+        $validActions = [
+            'index', 'upload', 'download', 'download-multiple', 'delete',
+            'delete-multiple', 'rename', 'new', 'copy', 'move', 'paste',
+            'select-destination', 'execute-copy-move', 'folder-tree',
+            'search', 'chmod', 'view', 'view-pdf', 'save', 'zip', 'extract',
+        ];
+
+        if (!in_array($action, $validActions, true)) {
+            $action = 'index'; // Unknown actions fall back to index safely
+        }
+
         // Map actions to permission names
         $permissionMap = [
             'upload' => 'upload',
@@ -102,6 +114,21 @@ class Router
             return;
         }
 
+        // ── Enforce POST + CSRF for state-changing actions ─────────────────
+        // Read-only actions (GET allowed without CSRF):
+        //   index, view, view-pdf, download, search, folder-tree, select-destination
+        $stateChangingActions = [
+            'upload', 'delete', 'delete-multiple', 'rename', 'new',
+            'copy', 'move', 'paste', 'execute-copy-move', 'chmod',
+            'save', 'zip', 'extract', 'download-multiple',
+        ];
+
+        if (in_array($action, $stateChangingActions, true)) {
+            if (!$this->requirePostWithCsrf($action)) {
+                return;
+            }
+        }
+
         // Route to appropriate handler
         match ($action) {
             'upload' => $this->handleUpload(),
@@ -126,6 +153,62 @@ class Router
             'extract' => $this->handleExtract(),
             default => $this->handleIndex(),
         };
+    }
+
+    /**
+     * Validate CSRF token from POST body or X-CSRF-Token header
+     * Respects the csrf_protection config flag for framework integration
+     */
+    private function validateCsrf(): bool
+    {
+        // If CSRF protection is disabled (e.g., framework handles it), skip
+        if (!($this->config['security']['csrf_protection'] ?? true)) {
+            return true;
+        }
+
+        // Try POST body first
+        $token = $this->request->post('csrf_token', '');
+
+        // Fallback to X-CSRF-Token header (for AJAX/JSON requests)
+        if (empty($token)) {
+            $token = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+        }
+
+        return $this->csrf->validateToken($token);
+    }
+
+    /**
+     * Require POST method and valid CSRF token for state-changing actions.
+     * Returns true if valid, false if rejected (response already sent).
+     * For AJAX endpoints, returns JSON error. For form endpoints, redirects.
+     */
+    private function requirePostWithCsrf(string $action): bool
+    {
+        // AJAX endpoints return JSON errors
+        $ajaxActions = ['delete-multiple', 'download-multiple', 'paste', 'chmod'];
+        $isAjax = in_array($action, $ajaxActions, true);
+
+        if (!$this->request->isPost()) {
+            if ($isAjax) {
+                Response::json(['success' => false, 'message' => 'POST method required'], 405);
+            } else {
+                $this->session->setFlashMessage('error', 'Invalid request method.');
+                Response::redirect($this->getBaseUrl() . '?p=' . urlencode($this->request->get('p', '')));
+            }
+            return false;
+        }
+
+        if (!$this->validateCsrf()) {
+            if ($isAjax) {
+                Response::json(['success' => false, 'message' => 'Invalid security token'], 403);
+            } else {
+                $this->session->setFlashMessage('error', 'Invalid security token. Please try again.');
+                Response::redirect($this->getBaseUrl() . '?p=' . urlencode($this->request->get('p', $this->request->post('p', ''))));
+            }
+            return false;
+        }
+
+        return true;
     }
 
     /**
@@ -190,6 +273,10 @@ class Router
         // Make permissions available to template
         $permissions = $this->permissions;
 
+        // Make CSRF and messages available to template
+        $csrf = $this->csrf;
+        $messages = $this->messages;
+
         // Get flash message for notifications (e.g., after copy/move operations)
         $flashMessage = $this->session->getFlashMessage();
 
@@ -253,6 +340,12 @@ class Router
     {
         $currentPath = Validator::cleanPath($this->request->get('p', ''));
         $filename = $this->request->get('file', '');
+
+        // Validate filename early
+        if (empty($filename) || !Validator::isValidFileName($filename)) {
+            Response::error('Invalid file name', 400);
+            return;
+        }
 
         $this->fileOps->download($currentPath, $filename);
         Response::error('File not found', 404);
@@ -323,12 +416,19 @@ class Router
     }
 
     /**
-     * Handle file/directory deletion
+     * Handle file/directory deletion (POST + CSRF required)
      */
     private function handleDelete(): void
     {
-        $currentPath = Validator::cleanPath($this->request->get('p', ''));
-        $name = $this->request->get('name', '');
+        $currentPath = Validator::cleanPath($this->request->post('p', ''));
+        $name = $this->request->post('name', '');
+
+        // Validate name
+        if (empty($name) || !Validator::isValidFileName($name)) {
+            $this->session->setFlashMessage('error', 'Invalid item name.');
+            Response::redirect($this->getBaseUrl() . '?p=' . urlencode($currentPath));
+            return;
+        }
 
         if ($this->fileOps->delete($currentPath, $name)) {
             $this->session->setFlashMessage('success', "Deleted: $name");
@@ -345,10 +445,7 @@ class Router
      */
     private function handleDeleteMultiple(): void
     {
-        if (!$this->request->isPost()) {
-            Response::json(['success' => false, 'message' => 'POST required']);
-            return;
-        }
+        // POST + CSRF already enforced by handle()
 
         // Get JSON body
         $input = json_decode(file_get_contents('php://input'), true);
@@ -377,10 +474,7 @@ class Router
      */
     private function handlePaste(): void
     {
-        if (!$this->request->isPost()) {
-            Response::json(['success' => false, 'message' => 'POST required']);
-            return;
-        }
+        // POST + CSRF already enforced by handle()
 
         // Get JSON body
         $input = json_decode(file_get_contents('php://input'), true);
@@ -410,13 +504,13 @@ class Router
     }
 
     /**
-     * Handle rename
+     * Handle rename (POST + CSRF required)
      */
     private function handleRename(): void
     {
-        $currentPath = Validator::cleanPath($this->request->get('p', ''));
-        $oldName = $this->request->get('old', '');
-        $newName = $this->request->get('new', '');
+        $currentPath = Validator::cleanPath($this->request->post('p', ''));
+        $oldName = $this->request->post('old', '');
+        $newName = $this->request->post('new', '');
 
         if ($this->fileOps->rename($currentPath, $oldName, $newName)) {
             $this->session->setFlashMessage('success', "Renamed to: $newName");
@@ -428,12 +522,12 @@ class Router
     }
 
     /**
-     * Handle new directory creation
+     * Handle new directory creation (POST + CSRF required)
      */
     private function handleNewDirectory(): void
     {
-        $currentPath = Validator::cleanPath($this->request->get('p', ''));
-        $name = $this->request->get('name', '');
+        $currentPath = Validator::cleanPath($this->request->post('p', ''));
+        $name = $this->request->post('name', '');
 
         if ($this->dirManager->createDirectory($currentPath, $name)) {
             $this->session->setFlashMessage('success', "Created directory: $name");
@@ -446,14 +540,15 @@ class Router
 
     /**
      * Handle copy operation - store in session and redirect to destination browser
+     * (POST + CSRF required)
      */
     private function handleCopy(): void
     {
-        $file = $this->request->get('file', '');
-        $currentPath = Validator::cleanPath($this->request->get('p', ''));
+        $file = $this->request->post('file', '');
+        $currentPath = Validator::cleanPath($this->request->post('p', ''));
 
         if (empty($file)) {
-            $this->messages->error('No file specified for copy');
+            $this->session->setFlashMessage('error', 'No file specified for copy');
             Response::redirect($this->getBaseUrl() . '?p=' . urlencode($currentPath));
             return;
         }
@@ -471,14 +566,15 @@ class Router
 
     /**
      * Handle move operation - store in session and redirect to destination browser
+     * (POST + CSRF required)
      */
     private function handleMove(): void
     {
-        $file = $this->request->get('file', '');
-        $currentPath = Validator::cleanPath($this->request->get('p', ''));
+        $file = $this->request->post('file', '');
+        $currentPath = Validator::cleanPath($this->request->post('p', ''));
 
         if (empty($file)) {
-            $this->messages->error('No file specified for move');
+            $this->session->setFlashMessage('error', 'No file specified for move');
             Response::redirect($this->getBaseUrl() . '?p=' . urlencode($currentPath));
             return;
         }
@@ -584,6 +680,7 @@ class Router
      */
     private function handleChmod(): void
     {
+        // POST + CSRF already enforced by handle()
         $currentPath = Validator::cleanPath($this->request->post('p', ''));
         $name = $this->request->post('name', '');
         $mode = $this->request->post('mode', '');
@@ -605,6 +702,13 @@ class Router
     {
         $currentPath = Validator::cleanPath($this->request->get('p', ''));
         $filename = $this->request->get('file', '');
+
+        // Validate filename early
+        if (empty($filename) || !Validator::isValidFileName($filename)) {
+            $this->messages->error('Invalid file name');
+            Response::redirect($this->getBaseUrl() . '?p=' . urlencode($currentPath));
+            return;
+        }
 
         $fileInfo = $this->fileOps->getFileInfo($currentPath, $filename);
 
@@ -655,6 +759,12 @@ class Router
         $currentPath = Validator::cleanPath($this->request->get('p', ''));
         $filename = $this->request->get('file', '');
 
+        // Validate filename early
+        if (empty($filename) || !Validator::isValidFileName($filename)) {
+            Response::error('Invalid file name', 400);
+            return;
+        }
+
         $fileInfo = $this->fileOps->getFileInfo($currentPath, $filename);
 
         if (!$fileInfo) {
@@ -670,9 +780,12 @@ class Router
             return;
         }
 
+        // Sanitize filename for header to prevent injection
+        $safeFilename = Response::sanitizeHeaderFilename($filename);
+
         // Set headers to display PDF inline in browser
         header('Content-Type: application/pdf');
-        header('Content-Disposition: inline; filename="' . $filename . '"');
+        header('Content-Disposition: inline; filename="' . $safeFilename . '"');
         header('Content-Length: ' . filesize($fullPath));
         header('Cache-Control: private, max-age=0, must-revalidate');
         header('Pragma: public');
@@ -727,13 +840,13 @@ class Router
     }
 
     /**
-     * Handle ZIP extraction
+     * Handle ZIP extraction (POST + CSRF required)
      */
     private function handleExtract(): void
     {
-        $currentPath = Validator::cleanPath($this->request->get('p', ''));
-        $zipName = $this->request->get('file', '');
-        $targetFolder = $this->request->get('target_folder', null);
+        $currentPath = Validator::cleanPath($this->request->post('p', ''));
+        $zipName = $this->request->post('file', '');
+        $targetFolder = $this->request->post('target_folder', null);
 
         if ($this->fileOps->extractZip($currentPath, $zipName, $targetFolder)) {
             $msg = "Extracted: $zipName";

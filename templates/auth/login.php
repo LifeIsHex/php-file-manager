@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: login.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 18:28:12 MST (-0700)
+ * Last Modified: Sat, 28 Feb 2026 - 12:29:43 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -25,8 +25,8 @@ if ($assetsPath === '') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - File Manager</title>
-    <link rel="stylesheet" href="<?= $assetsPath ?>/bulma/css/bulma.min.css">
-    <link rel="stylesheet" href="<?= $assetsPath ?>/fonts/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/bulma/css/bulma.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/fonts/font-awesome/6.5.1/css/all.min.css">
     <style>
         .login-container {
             min-height: 100vh;
@@ -52,7 +52,7 @@ if ($assetsPath === '') {
         if (isset($messages) && is_object($messages)):
             foreach ($messages->getAll() as $msg):
                 ?>
-                <div class="notification is-<?= $msg['type'] ?> is-light">
+                <div class="notification is-<?= htmlspecialchars($msg['type']) ?> is-light">
                     <button class="delete"></button>
                     <?= Validator::escape($msg['message']) ?>
                 </div>
@@ -105,12 +105,7 @@ if ($assetsPath === '') {
             </div>
         </form>
 
-        <div class="has-text-centered mt-4">
-            <p class="is-size-7 has-text-grey">
-                <i class="fas fa-info-circle"></i>
-                Default: admin / admin@123
-            </p>
-        </div>
+
     </div>
 </div>
 

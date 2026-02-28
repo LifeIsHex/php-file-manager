@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Response.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 18:42:47 MST (-0700)
+ * Last Modified: Sat, 28 Feb 2026 - 12:26:03 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -36,6 +36,15 @@ class Response
      */
     public static function redirect(string $url, int $statusCode = 302): never
     {
+        // Prevent open redirects: only allow relative URLs
+        // Strip newlines/carriage returns to prevent header injection
+        $url = str_replace(["\r", "\n", "\0"], '', $url);
+
+        // Block absolute URLs with schemes (e.g., http://, javascript:, data:)
+        if (preg_match('#^[a-zA-Z][a-zA-Z0-9+\-.]*://#', $url)) {
+            $url = '/'; // Fallback to root
+        }
+
         http_response_code($statusCode);
         header("Location: $url");
         exit;
@@ -67,7 +76,7 @@ class Response
      * Sanitize filename for use in HTTP headers
      * Prevents header injection attacks
      */
-    private static function sanitizeHeaderFilename(string $filename): string
+    public static function sanitizeHeaderFilename(string $filename): string
     {
         // Remove any newlines, carriage returns, and null bytes
         $filename = str_replace(["\r", "\n", "\0"], '', $filename);

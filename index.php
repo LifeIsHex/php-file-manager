@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: index.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 18:31:37 MST (-0700)
+ * Last Modified: Sat, 28 Feb 2026 - 12:30:15 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -26,7 +26,7 @@ declare(strict_types=1);
 
 // Error reporting
 error_reporting(E_ALL);
-ini_set('display_errors', '1');
+ini_set('display_errors', '0');
 ini_set('log_errors', '1');
 
 // Require Composer autoloader

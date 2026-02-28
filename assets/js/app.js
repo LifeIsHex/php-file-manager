@@ -4,12 +4,54 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: app.js
  *
- * Last Modified: Tue, 24 Feb 2026 - 11:10:37 MST (-0700)
+ * Last Modified: Sat, 28 Feb 2026 - 15:05:44 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
 
 // File Manager JavaScript
+
+// ============================================
+// CSRF TOKEN HELPER
+// ============================================
+function getCsrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    return meta ? meta.getAttribute('content') : '';
+}
+
+// Submit a POST form with CSRF token (used for state-changing actions)
+function submitPostForm(action, params) {
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '?action=' + action;
+
+    // Add CSRF token
+    const csrfInput = document.createElement('input');
+    csrfInput.type = 'hidden';
+    csrfInput.name = 'csrf_token';
+    csrfInput.value = getCsrfToken();
+    form.appendChild(csrfInput);
+
+    // Add other params
+    for (const [key, value] of Object.entries(params)) {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = key;
+        input.value = value;
+        form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+}
+
+// Helper: build headers for AJAX requests (includes CSRF)
+function ajaxHeaders(contentType = 'application/json') {
+    return {
+        'Content-Type': contentType,
+        'X-CSRF-Token': getCsrfToken()
+    };
+}
 
 // Mobile navbar toggle
 document.addEventListener('DOMContentLoaded', () => {
@@ -293,9 +335,12 @@ function confirmRename() {
         return;
     }
 
-    const params = new URLSearchParams(window.location.search);
-    const currentPath = params.get('p') || '';
-    window.location.href = `?action=rename&p=${encodeURIComponent(currentPath)}&old=${encodeURIComponent(renameOldName)}&new=${encodeURIComponent(newName)}`;
+    const currentPath = getCurrentPath();
+    submitPostForm('rename', {
+        p: currentPath,
+        old: renameOldName,
+        new: newName
+    });
 }
 
 // Allow Enter key to submit rename
@@ -538,16 +583,13 @@ function octalToSymbolic(octal) {
 
 function confirmPermissionChange() {
     const newPerms = document.getElementById('newPermissionsOctal').textContent;
-    const params = new URLSearchParams(window.location.search);
-    const currentPath = params.get('p') || '';
+    const currentPath = getCurrentPath();
 
-    // Send AJAX request
+    // Send AJAX request with CSRF
     fetch('?action=chmod', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `p=${encodeURIComponent(currentPath)}&name=${encodeURIComponent(permissionsItemName)}&mode=${encodeURIComponent(newPerms)}`
+        headers: ajaxHeaders('application/x-www-form-urlencoded'),
+        body: `p=${encodeURIComponent(currentPath)}&name=${encodeURIComponent(permissionsItemName)}&mode=${encodeURIComponent(newPerms)}&csrf_token=${encodeURIComponent(getCsrfToken())}`
     })
         .then(response => response.json())
         .then(data => {
@@ -626,16 +668,12 @@ function confirmExtract() {
 
     if (!fileName) return;
 
-    const params = new URLSearchParams(window.location.search);
-    const currentPath = params.get('p') || '';
-
-    let url = `?action=extract&p=${encodeURIComponent(currentPath)}&file=${encodeURIComponent(fileName)}`;
-
+    const currentPath = getCurrentPath();
+    const params = {p: currentPath, file: fileName};
     if (folderName) {
-        url += `&target_folder=${encodeURIComponent(folderName)}`;
+        params.target_folder = folderName;
     }
-
-    window.location.href = url;
+    submitPostForm('extract', params);
 }
 
 // Allow Enter key to submit extract
@@ -890,31 +928,11 @@ function performCopyMove() {
         return;
     }
 
-    // Create form and submit
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '?action=' + operation;
-
-    const sourceInput = document.createElement('input');
-    sourceInput.type = 'hidden';
-    sourceInput.name = 'source';
-    sourceInput.value = sourcePath;
-    form.appendChild(sourceInput);
-
-    const destInput = document.createElement('input');
-    destInput.type = 'hidden';
-    destInput.name = 'destination';
-    destInput.value = selectedDestination;
-    form.appendChild(destInput);
-
-    const pathInput = document.createElement('input');
-    pathInput.type = 'hidden';
-    pathInput.name = 'currentPath';
-    pathInput.value = currentCopyMovePath;
-    form.appendChild(pathInput);
-
-    document.body.appendChild(form);
-    form.submit();
+    submitPostForm(operation, {
+        source: sourcePath,
+        destination: selectedDestination,
+        currentPath: currentCopyMovePath
+    });
 }
 
 function getCurrentPath() {
@@ -1097,13 +1115,11 @@ async function confirmMove() {
     try {
         const response = await fetch('?action=paste', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: ajaxHeaders(),
             body: JSON.stringify({
                 items: itemsToMove,
                 sourcePath: currentPath,
-                destPath: destPath,  // Fixed: was 'destinationPath', backend expects 'destPath'
+                destPath: destPath,
                 operation: 'cut'
             })
         });
@@ -1129,30 +1145,19 @@ async function confirmMove() {
 
 // Legacy function for backwards compatibility (no longer used by drag-drop)
 function performDragDropMove(sourcePath, destPath) {
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '?action=move';
+    submitPostForm('move', {
+        source: sourcePath,
+        destination: destPath,
+        currentPath: getCurrentPath()
+    });
+}
 
-    const sourceInput = document.createElement('input');
-    sourceInput.type = 'hidden';
-    sourceInput.name = 'source';
-    sourceInput.value = sourcePath;
-    form.appendChild(sourceInput);
-
-    const destInput = document.createElement('input');
-    destInput.type = 'hidden';
-    destInput.name = 'destination';
-    destInput.value = destPath;
-    form.appendChild(destInput);
-
-    const pathInput = document.createElement('input');
-    pathInput.type = 'hidden';
-    pathInput.name = 'currentPath';
-    pathInput.value = getCurrentPath();
-    form.appendChild(pathInput);
-
-    document.body.appendChild(form);
-    form.submit();
+// Submit copy/move as POST with CSRF (called from template copy/move buttons)
+function submitCopyMove(action, fileName, currentPath) {
+    submitPostForm(action, {
+        file: fileName,
+        p: currentPath
+    });
 }
 
 // ============================================
@@ -1273,9 +1278,7 @@ async function pasteFromClipboard() {
     try {
         const response = await fetch('?action=paste', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: ajaxHeaders(),
             body: JSON.stringify({
                 items: clipboard.items,
                 sourcePath: clipboard.sourcePath,
@@ -1391,18 +1394,11 @@ async function confirmDelete() {
     closeDeleteModal();
 
     if (itemsToDelete.length === 1 && !isMultiple) {
-        // Single item delete via form (original behavior)
-        const form = document.createElement('form');
-        form.method = 'GET';
-        form.action = '';
-
-        form.innerHTML = `
-            <input type="hidden" name="action" value="delete">
-            <input type="hidden" name="p" value="${escapeHtml(currentPath)}">
-            <input type="hidden" name="name" value="${escapeHtml(itemsToDelete[0])}">
-        `;
-        document.body.appendChild(form);
-        form.submit();
+        // Single item delete via POST with CSRF
+        submitPostForm('delete', {
+            p: currentPath,
+            name: itemsToDelete[0]
+        });
         return;
     }
 
@@ -1410,9 +1406,7 @@ async function confirmDelete() {
     try {
         const response = await fetch('?action=delete-multiple', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: ajaxHeaders(),
             body: JSON.stringify({
                 items: itemsToDelete,
                 path: currentPath
@@ -1455,9 +1449,7 @@ async function downloadSelected() {
     try {
         const response = await fetch('?action=download-multiple', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers: ajaxHeaders(),
             body: JSON.stringify({
                 items: items,
                 path: currentPath

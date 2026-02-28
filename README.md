@@ -10,6 +10,17 @@ A modern, secure, and feature-rich PHP file manager with beautiful Bulma UI. Bui
 
 ---
 
+## 🛡️ Reporting Issues & Security Vulnerabilities
+
+> [!CAUTION]
+> **Found a security vulnerability?** Please **do NOT** open a public issue. Instead, report it privately via [GitHub Security Advisories](https://github.com/LifeIsHex/php-file-manager/security/advisories/new) so it can be addressed before public disclosure.
+
+For **bugs** and **feature requests**, please open an issue on GitHub:
+
+- 🐛 [Report a Bug](https://github.com/LifeIsHex/php-file-manager/issues/new?labels=bug&template=bug_report.md)
+- 💡 [Request a Feature](https://github.com/LifeIsHex/php-file-manager/issues/new?labels=enhancement&template=feature_request.md)
+- ❓ [Ask a Question](https://github.com/LifeIsHex/php-file-manager/issues/new?labels=question)
+
 ## ✨ Features
 
 ### File Operations

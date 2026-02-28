@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: index.php
  *
- * Last Modified: Tue, 24 Feb 2026 - 11:11:19 MST (-0700)
+ * Last Modified: Sat, 28 Feb 2026 - 12:29:06 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -193,7 +193,7 @@ ob_start();
                         <td>
                             <a href="?p=<?= urlencode($currentPath ? $currentPath . '/' . $dir['name'] : $dir['name']) ?>"
                                class="has-text-link">
-                                <i class="fas <?= $dir['icon'] ?> mr-2 has-text-info"></i>
+                                <i class="fas <?= Validator::escape($dir['icon']) ?> mr-2 has-text-info"></i>
                                 <strong><?= Validator::escape($dir['name']) ?></strong>
                             </a>
                         </td>
@@ -207,7 +207,7 @@ ob_start();
                             <td><?= date($config['fm']['datetime_format'] ?? 'Y-m-d H:i', $dir['modified']) ?></td>
                         <?php endif; ?>
                         <?php if ($showPermissions): ?>
-                            <td class="has-text-grey is-family-monospace is-size-7 is-hidden-mobile"><?= $dir['permissions'] ?></td>
+                            <td class="has-text-grey is-family-monospace is-size-7 is-hidden-mobile"><?= Validator::escape($dir['permissions']) ?></td>
                         <?php endif; ?>
                         <td>
                             <div class="buttons are-small">
@@ -218,20 +218,20 @@ ob_start();
                                     </button>
                                 <?php endif; ?>
                                 <?php if ($permissions->can('copy')): ?>
-                                    <a href="?action=copy&file=<?= urlencode($dir['name']) ?>&p=<?= urlencode($currentPath) ?>"
-                                       class="button is-info" title="Copy">
+                                    <button class="button is-info" title="Copy"
+                                            onclick="submitCopyMove('copy', '<?= Validator::escape($dir['name']) ?>', '<?= Validator::escape($currentPath) ?>')">
                                         <i class="fas fa-copy"></i>
-                                    </a>
+                                    </button>
                                 <?php endif; ?>
                                 <?php if ($permissions->can('move')): ?>
-                                    <a href="?action=move&file=<?= urlencode($dir['name']) ?>&p=<?= urlencode($currentPath) ?>"
-                                       class="button is-primary" title="Move">
+                                    <button class="button is-primary" title="Move"
+                                            onclick="submitCopyMove('move', '<?= Validator::escape($dir['name']) ?>', '<?= Validator::escape($currentPath) ?>')">
                                         <i class="fas fa-arrows-alt"></i>
-                                    </a>
+                                    </button>
                                 <?php endif; ?>
                                 <?php if ($permissions->can('permissions')): ?>
                                     <button class="button is-info"
-                                            onclick="changePermissions('<?= Validator::escape($dir['name']) ?>', '<?= $dir['permissions'] ?>')">
+                                            onclick="changePermissions('<?= Validator::escape($dir['name']) ?>', '<?= Validator::escape($dir['permissions']) ?>')">
                                         <i class="fas fa-lock"></i>
                                     </button>
                                 <?php endif; ?>
@@ -260,7 +260,7 @@ ob_start();
                             </label>
                         </td>
                         <td>
-                            <i class="fas <?= $file['icon'] ?> mr-2"></i>
+                            <i class="fas <?= Validator::escape($file['icon']) ?> mr-2"></i>
                             <?= Validator::escape($file['name']) ?>
                         </td>
                         <?php if ($showSize): ?>
@@ -273,7 +273,7 @@ ob_start();
                             <td><?= date($config['fm']['datetime_format'] ?? 'Y-m-d H:i', $file['modified']) ?></td>
                         <?php endif; ?>
                         <?php if ($showPermissions): ?>
-                            <td class="has-text-grey is-family-monospace is-size-7 is-hidden-mobile"><?= $file['permissions'] ?></td>
+                            <td class="has-text-grey is-family-monospace is-size-7 is-hidden-mobile"><?= Validator::escape($file['permissions']) ?></td>
                         <?php endif; ?>
                         <td>
                             <div class="buttons are-small">
@@ -308,20 +308,20 @@ ob_start();
                                     </button>
                                 <?php endif; ?>
                                 <?php if ($permissions->can('copy')): ?>
-                                    <a href="?action=copy&file=<?= urlencode($file['name']) ?>&p=<?= urlencode($currentPath) ?>"
-                                       class="button is-info" title="Copy">
+                                    <button class="button is-info" title="Copy"
+                                            onclick="submitCopyMove('copy', '<?= Validator::escape($file['name']) ?>', '<?= Validator::escape($currentPath) ?>')">
                                         <i class="fas fa-copy"></i>
-                                    </a>
+                                    </button>
                                 <?php endif; ?>
                                 <?php if ($permissions->can('move')): ?>
-                                    <a href="?action=move&file=<?= urlencode($file['name']) ?>&p=<?= urlencode($currentPath) ?>"
-                                       class="button is-primary" title="Move">
+                                    <button class="button is-primary" title="Move"
+                                            onclick="submitCopyMove('move', '<?= Validator::escape($file['name']) ?>', '<?= Validator::escape($currentPath) ?>')">
                                         <i class="fas fa-arrows-alt"></i>
-                                    </a>
+                                    </button>
                                 <?php endif; ?>
                                 <?php if ($permissions->can('permissions')): ?>
                                     <button class="button is-link"
-                                            onclick="changePermissions('<?= Validator::escape($file['name']) ?>', '<?= $file['permissions'] ?>')">
+                                            onclick="changePermissions('<?= Validator::escape($file['name']) ?>', '<?= Validator::escape($file['permissions']) ?>')">
                                         <i class="fas fa-lock"></i>
                                     </button>
                                 <?php endif; ?>
@@ -460,8 +460,8 @@ ob_start();
                 <p class="modal-card-title">Create New Folder</p>
                 <button class="delete" aria-label="close" onclick="closeNewFolderModal()"></button>
             </header>
-            <form method="GET" action="">
-                <input type="hidden" name="action" value="new">
+            <form method="POST" action="?action=new">
+                <?= $csrf->getTokenField() ?>
                 <input type="hidden" name="p" value="<?= Validator::escape($currentPath) ?>">
                 <section class="modal-card-body">
                     <div class="field">
@@ -599,6 +599,7 @@ ob_start();
         <div class="modal-background" onclick="closeCompressModal()"></div>
         <div class="modal-card">
             <form method="POST" action="?action=zip" id="compressForm">
+                <?= $csrf->getTokenField() ?>
                 <input type="hidden" name="p" value="<?= Validator::escape($currentPath) ?>">
 
                 <header class="modal-card-head has-background-warning">

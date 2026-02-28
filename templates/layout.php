@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: layout.php
  *
- * Last Modified: Thu, 26 Feb 2026 - 21:24:34 MST (-0700)
+ * Last Modified: Sat, 28 Feb 2026 - 12:39:52 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -23,14 +23,19 @@ if ($assetsPath === '') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php if (isset($csrf)): ?>
+        <meta name="csrf-token" content="<?= htmlspecialchars($csrf->getToken()) ?>">
+    <?php endif; ?>
+    <meta http-equiv="Content-Security-Policy"
+          content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;">
     <title><?= $title ?? ($config['fm']['title'] ?? 'File Manager') ?></title>
-    <link rel="stylesheet" href="<?= $assetsPath ?>/bulma/css/bulma.min.css">
-    <link rel="stylesheet" href="<?= $assetsPath ?>/fonts/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="<?= $assetsPath ?>/libs/dropzone/5.9.3/dist/min/dropzone.min.css">
-    <link rel="stylesheet" href="<?= $assetsPath ?>/libs/bulma-responsive-tables/1.2.5/css/main.min.css">
-    <link rel="stylesheet" href="<?= $assetsPath ?>/css/custom.css">
-    <link rel="stylesheet" href="<?= $assetsPath ?>/css/context-menu.css">
-    <link rel="stylesheet" href="<?= $assetsPath ?>/css/toast.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/bulma/css/bulma.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/fonts/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/libs/dropzone/5.9.3/dist/min/dropzone.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/libs/bulma-responsive-tables/1.2.5/css/main.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/css/custom.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/css/context-menu.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/css/toast.css">
 </head>
 
 <body>
@@ -75,7 +80,7 @@ if ($assetsPath === '') {
 if (isset($messages) && is_object($messages)):
     foreach ($messages->getAll() as $msg):
         ?>
-        <div class="notification is-<?= $msg['type'] ?> is-light">
+        <div class="notification is-<?= htmlspecialchars($msg['type']) ?> is-light">
             <button class="delete"></button>
             <?= htmlspecialchars($msg['message']) ?>
         </div>
@@ -115,10 +120,10 @@ if (isset($flashMessage) && is_array($flashMessage)):
          data-text="<?= htmlspecialchars($flashMessage['text']) ?>" style="display: none;"></div>
 <?php endif; ?>
 
-<script src="<?= $assetsPath ?>/libs/sortable/1.15.6/Sortable.min.js"></script>
-<script src="<?= $assetsPath ?>/libs/dropzone/5.9.3/dist/min/dropzone.min.js"></script>
-<script src="<?= $assetsPath ?>/js/toast.js"></script>
-<script src="<?= $assetsPath ?>/js/app.js"></script>
+<script src="<?= htmlspecialchars($assetsPath) ?>/libs/sortable/1.15.6/Sortable.min.js"></script>
+<script src="<?= htmlspecialchars($assetsPath) ?>/libs/dropzone/5.9.3/dist/min/dropzone.min.js"></script>
+<script src="<?= htmlspecialchars($assetsPath) ?>/js/toast.js"></script>
+<script src="<?= htmlspecialchars($assetsPath) ?>/js/app.js"></script>
 </body>
 
 </html>
