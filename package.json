@@ -11,6 +11,6 @@
         "bulma": "1.0.4",
         "bulma-responsive-tables": "1.2.5",
         "dropzone": "5.9.3",
-        "sortablejs": "1.15.6"
+        "sortablejs": "1.15.7"
     }
 }
