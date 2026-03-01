@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: layout.php
  *
- * Last Modified: Sat, 28 Feb 2026 - 12:39:52 MST (-0700)
+ * Last Modified: Sat, 28 Feb 2026 - 16:40:11 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -30,9 +30,9 @@ if ($assetsPath === '') {
           content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:;">
     <title><?= $title ?? ($config['fm']['title'] ?? 'File Manager') ?></title>
     <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/bulma/css/bulma.min.css">
-    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/fonts/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/libs/dropzone/5.9.3/dist/min/dropzone.min.css">
-    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/libs/bulma-responsive-tables/1.2.5/css/main.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/fonts/font-awesome/css/all.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/libs/dropzone/dropzone.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/libs/bulma-responsive-tables/main.min.css">
     <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/css/custom.css">
     <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/css/context-menu.css">
     <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/css/toast.css">
@@ -120,8 +120,8 @@ if (isset($flashMessage) && is_array($flashMessage)):
          data-text="<?= htmlspecialchars($flashMessage['text']) ?>" style="display: none;"></div>
 <?php endif; ?>
 
-<script src="<?= htmlspecialchars($assetsPath) ?>/libs/sortable/1.15.6/Sortable.min.js"></script>
-<script src="<?= htmlspecialchars($assetsPath) ?>/libs/dropzone/5.9.3/dist/min/dropzone.min.js"></script>
+<script src="<?= htmlspecialchars($assetsPath) ?>/libs/sortable/Sortable.min.js"></script>
+<script src="<?= htmlspecialchars($assetsPath) ?>/libs/dropzone/dropzone.min.js"></script>
 <script src="<?= htmlspecialchars($assetsPath) ?>/js/toast.js"></script>
 <script src="<?= htmlspecialchars($assetsPath) ?>/js/app.js"></script>
 </body>

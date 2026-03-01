@@ -99,6 +99,41 @@ composer require lifeishex/php-file-manager
 
 ---
 
+## 🔄 Updating Frontend Assets
+
+Frontend libraries (Bulma, Font Awesome, Dropzone, SortableJS, Bulma Responsive Tables) are managed via **npm**. The compiled files are committed to the repo so no build step is needed for regular use.
+
+### To update a library
+
+```bash
+# 1. Install npm dependencies (first time only)
+npm install
+
+# 2. Edit the version in package.json, then:
+npm install   # pulls the new version
+
+# 3. Copy dist files into assets/
+npm run build
+
+# 4. Commit the updated assets/
+git add assets/ package.json
+git commit -m "chore: update <lib> to vX.Y.Z"
+```
+
+### Current versions
+
+| Library                 | Version |
+| ----------------------- | ------- |
+| Bulma                   | 1.0.4   |
+| Font Awesome            | 6.5.1   |
+| Dropzone                | 5.9.3   |
+| SortableJS              | 1.15.6  |
+| Bulma Responsive Tables | 1.2.5   |
+
+> **Note:** The `node_modules/` directory is gitignored. Only the built files in `assets/` are committed.
+
+---
+
 ## ⚙️ Configuration
 
 Create or modify `config.php`:

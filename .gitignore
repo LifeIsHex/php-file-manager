@@ -2,6 +2,10 @@
 /vendor/
 composer.phar
 
+# npm
+/node_modules/
+package-lock.json
+
 # IDE and Editor files
 .idea/
 .vscode/

@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: login.php
  *
- * Last Modified: Sat, 28 Feb 2026 - 12:29:43 MST (-0700)
+ * Last Modified: Sat, 28 Feb 2026 - 16:42:26 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -26,7 +26,7 @@ if ($assetsPath === '') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - File Manager</title>
     <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/bulma/css/bulma.min.css">
-    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/fonts/font-awesome/6.5.1/css/all.min.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/fonts/font-awesome/css/all.min.css">
     <style>
         .login-container {
             min-height: 100vh;
