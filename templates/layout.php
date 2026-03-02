@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: layout.php
  *
- * Last Modified: Sat, 28 Feb 2026 - 16:40:11 MST (-0700)
+ * Last Modified: Mon, 2 Mar 2026 - 09:11:58 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -62,6 +62,11 @@ if ($assetsPath === '') {
                             <?= htmlspecialchars($username) ?>
                         </span>
                 </div>
+                <div class="navbar-item">
+                        <span class="tag is-info is-light">
+                            v<?= (\FileManager\FileManager\Version::VERSION) ?>
+                        </span>
+                </div>
                 <?php if ($config['auth']['require_login'] ?? true): ?>
                     <div class="navbar-item">
                         <a href="?action=logout" class="button is-light is-small">
@@ -104,10 +109,10 @@ endif;
     <footer class="footer">
         <div class="content has-text-centered">
             <p>
-                <strong>PHP File Manager</strong> - PHP <?= PHP_VERSION ?> |
+                <strong>PHP File Manager</strong> <?= (\FileManager\FileManager\Version::VERSION) ?> - PHP <?= PHP_VERSION ?> |
                 Built with <a href="https://bulma.io" target="_blank">Bulma</a> |
                 <a href="https://github.com/LifeIsHex/php-file-manager" target="_blank"><i class="fab fa-github"></i> GitHub</a>
-            </p
+            </p>
         </div>
     </footer>
 <?php endif; ?>
