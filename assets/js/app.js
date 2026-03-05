@@ -4,7 +4,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: app.js
  *
- * Last Modified: Sat, 28 Feb 2026 - 15:05:44 MST (-0700)
+ * Last Modified: Thu, 5 Mar 2026 - 08:34:59 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -171,6 +171,7 @@ function initializeDropzone() {
             this.on('sending', function (file, xhr, formData) {
                 const params = new URLSearchParams(window.location.search);
                 formData.append('p', params.get('p') || '');
+                formData.append('csrf_token', getCsrfToken());
             });
 
             this.on('success', function (file, response) {
@@ -662,18 +663,45 @@ function closeExtractModal() {
     document.getElementById('extractFolderName').value = '';
 }
 
-function confirmExtract() {
+async function confirmExtract() {
     const fileName = document.getElementById('extractFileOrigin').value;
     const folderName = document.getElementById('extractFolderName').value.trim();
 
     if (!fileName) return;
 
+    closeExtractModal();
+
     const currentPath = getCurrentPath();
-    const params = {p: currentPath, file: fileName};
+
+    const formData = new FormData();
+    formData.append('csrf_token', getCsrfToken());
+    formData.append('p', currentPath);
+    formData.append('file', fileName);
     if (folderName) {
-        params.target_folder = folderName;
+        formData.append('target_folder', folderName);
     }
-    submitPostForm('extract', params);
+
+    showToast('Extracting ' + fileName + '...', 'info');
+
+    try {
+        const response = await fetch('?action=extract', {
+            method: 'POST',
+            headers: {'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-Token': getCsrfToken()},
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast(result.message, 'success');
+            setTimeout(() => window.location.reload(), 800);
+        } else {
+            showToast(result.message || 'Extraction failed', 'error');
+        }
+    } catch (error) {
+        console.error('Extract error:', error);
+        showToast('An error occurred while extracting', 'error');
+    }
 }
 
 // Allow Enter key to submit extract
