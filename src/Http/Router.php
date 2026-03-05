@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Router.php
  *
- * Last Modified: Thu, 5 Mar 2026 - 11:18:55 MST (-0700)
+ * Last Modified: Thu, 5 Mar 2026 - 14:37:02 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -260,6 +260,18 @@ class Router
     {
         $currentPath = Validator::cleanPath($this->request->get('p', ''));
 
+        // Auto-create the trash folder if the user navigates to it and it was deleted.
+        // This keeps the Trash button functional regardless of the folder's existence on disk.
+        if (!empty($currentPath) && ($this->config['trash']['enabled'] ?? true)) {
+            $trashFolderName = $this->config['trash']['folder_name'] ?? '.trash';
+            if ($currentPath === $trashFolderName) {
+                $trashRoot = $this->dirManager->getRootPath() . DIRECTORY_SEPARATOR . $trashFolderName;
+                if (!is_dir($trashRoot)) {
+                    @mkdir($trashRoot, 0755, true);
+                }
+            }
+        }
+
         // Get directory contents
         $contents = $this->dirManager->listContents($currentPath);
 
@@ -435,7 +447,8 @@ class Router
         if ($this->fileOps->delete($currentPath, $name)) {
             $this->session->setFlashMessage('success', "Deleted: $name");
         } else {
-            $this->session->setFlashMessage('error', "Failed to delete: $name");
+            $error = $this->fileOps->getLastError();
+            $this->session->setFlashMessage('error', $error ?: "Failed to delete: $name");
         }
 
         Response::redirect($this->getBaseUrl() . '?p=' . urlencode($currentPath));

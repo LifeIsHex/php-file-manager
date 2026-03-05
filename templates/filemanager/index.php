@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: index.php
  *
- * Last Modified: Thu, 5 Mar 2026 - 11:19:01 MST (-0700)
+ * Last Modified: Thu, 5 Mar 2026 - 15:00:55 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -24,6 +24,10 @@ $showModified = $_cols['modified'] ?? true;
 $showPermissions = $_cols['permissions'] ?? true;
 // Compute total visible columns for colspan (checkbox + Name + Actions = 3 fixed)
 $_visibleCols = 3 + (int)$showSize + (int)$showOwner + (int)$showModified + (int)$showPermissions;
+
+// Configured trash folder name (used to protect it from UI delete/rename at root level)
+$_trashEnabled = $config['trash']['enabled'] ?? true;
+$_trashFolderName = $_trashEnabled ? ($config['trash']['folder_name'] ?? '.trash') : null;
 
 ob_start();
 ?>
@@ -226,7 +230,14 @@ ob_start();
                         <?php endif; ?>
                         <td>
                             <div class="buttons are-small">
-                                <?php if ($permissions->can('rename')): ?>
+                                <?php
+                                // Protect the trash folder: hide rename/delete buttons for it
+                                // when viewing the root directory.
+                                $isTrashDir = ($_trashFolderName !== null
+                                        && $currentPath === ''
+                                        && $dir['name'] === $_trashFolderName);
+                                ?>
+                                <?php if ($permissions->can('rename') && !$isTrashDir): ?>
                                     <button class="button is-warning"
                                             onclick="renameItem('<?= Validator::escape($dir['name']) ?>')">
                                         <i class="fas fa-edit"></i>
@@ -238,7 +249,7 @@ ob_start();
                                         <i class="fas fa-copy"></i>
                                     </button>
                                 <?php endif; ?>
-                                <?php if ($permissions->can('move')): ?>
+                                <?php if ($permissions->can('move') && !$isTrashDir): ?>
                                     <button class="button is-primary" title="Move"
                                             onclick="submitCopyMove('move', '<?= Validator::escape($dir['name']) ?>', '<?= Validator::escape($currentPath) ?>')">
                                         <i class="fas fa-arrows-alt"></i>
@@ -256,7 +267,7 @@ ob_start();
                                         <i class="fas fa-download"></i>
                                     </a>
                                 <?php endif; ?>
-                                <?php if ($permissions->can('delete')): ?>
+                                <?php if ($permissions->can('delete') && !$isTrashDir): ?>
                                     <button class="button is-danger" onclick="deleteItem('<?= Validator::escape($dir['name']) ?>')">
                                         <i class="fas fa-trash"></i>
                                     </button>
@@ -267,7 +278,12 @@ ob_start();
                 <?php endforeach; ?>
 
                 <!-- Files -->
-                <?php foreach ($contents['files'] as $file): ?>
+                <?php
+                // Reset $isTrashDir before the files loop — PHP foreach variables persist
+                // in scope after the loop ends, so the last directory value could leak here.
+                // Files are never the trash folder (it's a directory), so always false.
+                $isTrashDir = false;
+                foreach ($contents['files'] as $file): ?>
                     <tr class="file-row" data-name="<?= Validator::escape($file['name']) ?>">
                         <td>
                             <label class="checkbox">
@@ -537,7 +553,11 @@ ob_start();
             </footer>
         </div>
     </div>
-    <script>window.FM_TRASH_ENABLED = <?= ($config['trash']['enabled'] ?? true) ? 'true' : 'false' ?>;</script>
+    <script>
+        window.FM_TRASH_ENABLED = <?= ($config['trash']['enabled'] ?? true) ? 'true' : 'false' ?>;
+        window.FM_TRASH_FOLDER_NAME = <?= json_encode($_trashFolderName ?? null) ?>;
+        window.FM_CURRENT_PATH = <?= json_encode($currentPath) ?>;
+    </script>
 
     <!-- Move Confirmation Modal (for drag-drop) -->
     <div id="moveModal" class="modal">

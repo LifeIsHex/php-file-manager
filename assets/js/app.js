@@ -4,7 +4,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: app.js
  *
- * Last Modified: Thu, 5 Mar 2026 - 11:18:36 MST (-0700)
+ * Last Modified: Thu, 5 Mar 2026 - 15:00:11 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -1701,6 +1701,13 @@ function contextMenuAction(action) {
 
         case 'cut':
             // Use new Clipboard system - cut single item or selected items
+            // Block cutting the trash folder (it cannot be moved)
+            if (window.FM_TRASH_FOLDER_NAME
+                && !window.FM_CURRENT_PATH
+                && contextMenuItem === window.FM_TRASH_FOLDER_NAME) {
+                showToast('The trash folder cannot be moved.', 'warning');
+                break;
+            }
             const selectedForCut = getSelectedItems();
             if (selectedForCut.length > 0 && selectedForCut.includes(contextMenuItem)) {
                 copyToClipboard(selectedForCut, 'cut');

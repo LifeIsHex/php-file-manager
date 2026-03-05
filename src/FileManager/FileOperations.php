@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: FileOperations.php
  *
- * Last Modified: Thu, 5 Mar 2026 - 11:18:47 MST (-0700)
+ * Last Modified: Thu, 5 Mar 2026 - 14:42:46 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -273,6 +273,12 @@ class FileOperations
      */
     public function delete(string $relativePath, string $name): bool
     {
+        // Protect the trash folder from deletion
+        if ($this->isTrashFolder($relativePath, $name)) {
+            $this->lastError = 'The trash folder cannot be deleted.';
+            return false;
+        }
+
         $filepath = $this->getFullPath($relativePath, $name);
 
         if (!$filepath) {
@@ -384,6 +390,12 @@ class FileOperations
             return false;
         }
 
+        // Protect the trash folder from being renamed
+        if ($this->isTrashFolder($relativePath, $oldName)) {
+            $this->lastError = 'The trash folder cannot be renamed.';
+            return false;
+        }
+
         $oldPath = $this->getFullPath($relativePath, $oldName);
         if (!$oldPath) {
             return false;
@@ -438,11 +450,16 @@ class FileOperations
      */
     public function move(string $sourcePath, string $destPath): bool
     {
-        // Guard inherited from copy(), but also check explicitly
         $cleanSource = Validator::cleanPath($sourcePath);
         $cleanDest = Validator::cleanPath($destPath);
         $fullSource = $this->rootPath . DIRECTORY_SEPARATOR . $cleanSource;
         $fullDest = $this->rootPath . DIRECTORY_SEPARATOR . $cleanDest;
+
+        // Protect the trash folder from being moved
+        if ($this->isTrashFolderPath($cleanSource)) {
+            $this->lastError = 'The trash folder cannot be moved.';
+            return false;
+        }
 
         if (is_dir($fullSource) && $this->isSubPathOf($fullDest, $fullSource)) {
             return false;
@@ -456,6 +473,43 @@ class FileOperations
         }
 
         return false;
+    }
+
+    /**
+     * Check whether a name+path combination refers to the trash folder root.
+     * Only items at the file manager root (empty relative path) whose name
+     * matches the configured trash folder name are considered protected.
+     */
+    private function isTrashFolder(string $relativePath, string $name): bool
+    {
+        $trashEnabled = $this->config['trash']['enabled'] ?? true;
+        if (!$trashEnabled) {
+            return false;
+        }
+
+        $trashFolderName = $this->config['trash']['folder_name'] ?? '.trash';
+        $cleanPath = Validator::cleanPath($relativePath);
+
+        // The trash folder lives only at the root level
+        return $cleanPath === '' && $name === $trashFolderName;
+    }
+
+    /**
+     * Path-based variant: check if a cleaned relative path IS the trash folder.
+     * Used by move() and moveItem() which receive composite paths like '.trash'
+     * rather than a (parentDir, name) pair.
+     */
+    private function isTrashFolderPath(string $cleanRelativePath): bool
+    {
+        $trashEnabled = $this->config['trash']['enabled'] ?? true;
+        if (!$trashEnabled) {
+            return false;
+        }
+
+        $trashFolderName = $this->config['trash']['folder_name'] ?? '.trash';
+
+        // Must be exactly the top-level trash folder (no subdirectory separator)
+        return $cleanRelativePath === $trashFolderName;
     }
 
     /**
@@ -927,6 +981,11 @@ class FileOperations
     {
         $cleanSource = Validator::cleanPath($sourcePath);
         $cleanDest = Validator::cleanPath($destinationPath);
+
+        // Protect the trash folder from being moved (source is a full relative path)
+        if ($this->isTrashFolderPath($cleanSource)) {
+            return ['success' => false, 'message' => 'The trash folder cannot be moved.'];
+        }
 
         $fullSource = $this->rootPath . ($cleanSource ? DIRECTORY_SEPARATOR . $cleanSource : '');
         $fullDest = $this->rootPath . ($cleanDest ? DIRECTORY_SEPARATOR . $cleanDest : '');
