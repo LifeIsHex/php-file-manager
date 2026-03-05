@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: index.php
  *
- * Last Modified: Sat, 28 Feb 2026 - 12:29:06 MST (-0700)
+ * Last Modified: Thu, 5 Mar 2026 - 11:19:01 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -109,6 +109,21 @@ ob_start();
             </div>
         </div>
         <div class="level-right">
+            <?php if ($config['trash']['enabled'] ?? true): ?>
+                <div class="level-item">
+                    <?php
+                    $trashFolderName = $config['trash']['folder_name'] ?? '.trash';
+                    $trashUrl = '?p=' . urlencode($trashFolderName);
+                    $isInTrash = ($currentPath === $trashFolderName);
+                    ?>
+                    <a href="<?= htmlspecialchars($trashUrl) ?>"
+                       class="button <?= $isInTrash ? 'is-dark' : 'is-light' ?>"
+                       title="View Trash (<?= htmlspecialchars($trashFolderName) ?>)">
+                        <i class="fas fa-trash-restore mr-2"></i>
+                        Trash
+                    </a>
+                </div>
+            <?php endif; ?>
             <div class="level-item">
                 <div class="field has-addons">
                     <div class="control has-icons-left">
@@ -504,18 +519,25 @@ ob_start();
                 </div>
                 <div class="notification is-warning is-light mt-4">
                     <i class="fas fa-info-circle mr-2"></i>
-                    This action cannot be undone.
+                    Permanent deletion <strong>cannot be undone</strong>. Use <em>Move to Trash</em> to recover files later.
                 </div>
             </section>
-            <footer class="modal-card-foot">
-                <button class="button is-danger mr-2" onclick="confirmDelete()">
+            <footer class="modal-card-foot" style="flex-wrap: wrap; gap: 0.5rem;">
+                <?php if ($config['trash']['enabled'] ?? true): ?>
+                    <button class="button is-warning" onclick="confirmDelete('trash')">
+                        <i class="fas fa-trash-restore mr-2"></i>
+                        Move to Trash
+                    </button>
+                <?php endif; ?>
+                <button class="button is-danger" onclick="confirmDelete('permanent')">
                     <i class="fas fa-trash mr-2"></i>
-                    Delete
+                    Delete Permanently
                 </button>
                 <button class="button" onclick="closeDeleteModal()">Cancel</button>
             </footer>
         </div>
     </div>
+    <script>window.FM_TRASH_ENABLED = <?= ($config['trash']['enabled'] ?? true) ? 'true' : 'false' ?>;</script>
 
     <!-- Move Confirmation Modal (for drag-drop) -->
     <div id="moveModal" class="modal">

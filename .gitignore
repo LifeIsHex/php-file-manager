@@ -60,3 +60,6 @@ config.local.php
 # Upload/test directories (if applicable)
 /uploads/test/
 /test-files/
+
+# Trash
+.trash

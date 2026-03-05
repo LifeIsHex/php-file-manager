@@ -4,7 +4,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: app.js
  *
- * Last Modified: Thu, 5 Mar 2026 - 08:34:59 MST (-0700)
+ * Last Modified: Thu, 5 Mar 2026 - 11:18:36 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -1406,8 +1406,8 @@ function closeDeleteModal() {
     pendingDeleteItems = [];
 }
 
-// Confirm delete - called when user clicks Delete button in modal
-async function confirmDelete() {
+// Confirm delete - mode: 'permanent' (default) or 'trash'
+async function confirmDelete(mode = 'permanent') {
     if (pendingDeleteItems.length === 0) {
         closeDeleteModal();
         return;
@@ -1421,6 +1421,13 @@ async function confirmDelete() {
     // Close modal immediately for better UX
     closeDeleteModal();
 
+    // Branch: trash vs permanent delete
+    if (mode === 'trash' && window.FM_TRASH_ENABLED) {
+        await trashItems(itemsToDelete, currentPath);
+        return;
+    }
+
+    // ── Permanent delete ──────────────────────────────────────────────────
     if (itemsToDelete.length === 1 && !isMultiple) {
         // Single item delete via POST with CSRF
         submitPostForm('delete', {
@@ -1452,6 +1459,33 @@ async function confirmDelete() {
     } catch (error) {
         console.error('Delete error:', error);
         showToast('An error occurred while deleting', 'error');
+    }
+}
+
+// Move items to trash via AJAX
+async function trashItems(items, currentPath) {
+    showToast('Moving to trash...', 'info');
+    try {
+        const response = await fetch('?action=trash', {
+            method: 'POST',
+            headers: ajaxHeaders(),
+            body: JSON.stringify({
+                items: items,
+                path: currentPath
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            showToast(result.message, 'success');
+            setTimeout(() => window.location.reload(), 500);
+        } else {
+            showToast(result.message || 'Failed to move to trash', 'error');
+        }
+    } catch (error) {
+        console.error('Trash error:', error);
+        showToast('An error occurred while moving to trash', 'error');
     }
 }
 

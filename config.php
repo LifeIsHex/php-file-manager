@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: config.php
  *
- * Last Modified: Thu, 26 Feb 2026 - 21:01:05 MST (-0700)
+ * Last Modified: Thu, 5 Mar 2026 - 11:19:09 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -89,6 +89,12 @@ return [
             'modified' => true,   // Last modified date/time
             'permissions' => true,  // Unix permission string (e.g. rwxr-xr-x)
         ],
+    ],
+
+    // Trash / Recycle Bin
+    'trash' => [
+        'enabled' => true,      // Show "Move to Trash" option in delete modal
+        'folder_name' => '.trash',  // Trash folder name, created at the file manager root
     ],
 
     // Upload Settings

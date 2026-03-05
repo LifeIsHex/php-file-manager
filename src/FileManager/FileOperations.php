@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: FileOperations.php
  *
- * Last Modified: Thu, 26 Feb 2026 - 20:34:28 MST (-0700)
+ * Last Modified: Thu, 5 Mar 2026 - 11:18:47 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -284,6 +284,95 @@ class FileOperations
         }
 
         return unlink($filepath);
+    }
+
+    /**
+     * Move files/directories to .trash at the root of the file manager.
+     * Preserves relative path structure to show where items came from.
+     */
+    public function trashFiles(array $names, string $relativePath): array
+    {
+        $trashFolderName = $this->config['trash']['folder_name'] ?? '.trash';
+
+        // Trash dir is always at root, never inside itself
+        $trashRoot = $this->rootPath . DIRECTORY_SEPARATOR . $trashFolderName;
+
+        // Create trash root if it does not exist
+        if (!is_dir($trashRoot)) {
+            if (!mkdir($trashRoot, 0755, true)) {
+                return [
+                    'success' => false,
+                    'trashed' => 0,
+                    'errors' => ['Could not create trash folder'],
+                    'message' => 'Failed to create trash folder',
+                ];
+            }
+        }
+
+        // Determine trash subdirectory mirroring the relative path
+        $cleanRelative = Validator::cleanPath($relativePath);
+        $trashDir = $trashRoot . ($cleanRelative ? DIRECTORY_SEPARATOR . $cleanRelative : '');
+
+        if (!is_dir($trashDir)) {
+            mkdir($trashDir, 0755, true);
+        }
+
+        $trashed = 0;
+        $errors = [];
+
+        foreach ($names as $name) {
+            if (!Validator::isValidFileName($name)) {
+                $errors[] = "$name: Invalid file name";
+                continue;
+            }
+
+            $sourcePath = $this->rootPath
+                . ($cleanRelative ? DIRECTORY_SEPARATOR . $cleanRelative : '')
+                . DIRECTORY_SEPARATOR . $name;
+
+            // Security: must be within root and must not be the trash folder itself
+            if (!Validator::isWithinRoot($sourcePath, $this->rootPath) || !file_exists($sourcePath)) {
+                $errors[] = "$name: File not found";
+                continue;
+            }
+
+            $realSource = realpath($sourcePath);
+            $realTrashRoot = realpath($trashRoot);
+            if ($realSource && $realTrashRoot && str_starts_with($realSource, $realTrashRoot)) {
+                $errors[] = "$name: Cannot trash items inside the trash folder";
+                continue;
+            }
+
+            // Resolve destination — handle name collisions with a timestamp suffix
+            $destPath = $trashDir . DIRECTORY_SEPARATOR . $name;
+            if (file_exists($destPath)) {
+                $info = pathinfo($name);
+                $base = $info['filename'];
+                $ext = isset($info['extension']) ? '.' . $info['extension'] : '';
+                $suffix = date('Ymd_His');
+                $destPath = $trashDir . DIRECTORY_SEPARATOR . $base . '_' . $suffix . $ext;
+
+                // Extremely rare: same second conflict — add a counter
+                $counter = 1;
+                while (file_exists($destPath)) {
+                    $destPath = $trashDir . DIRECTORY_SEPARATOR . $base . '_' . $suffix . '_' . $counter . $ext;
+                    $counter++;
+                }
+            }
+
+            if (rename($sourcePath, $destPath)) {
+                $trashed++;
+            } else {
+                $errors[] = "$name: Failed to move to trash";
+            }
+        }
+
+        return [
+            'success' => $trashed > 0,
+            'trashed' => $trashed,
+            'errors' => $errors,
+            'message' => $trashed > 0 ? "Moved $trashed item(s) to trash" : 'No items moved to trash',
+        ];
     }
 
     /**

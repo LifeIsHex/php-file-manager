@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Router.php
  *
- * Last Modified: Thu, 5 Mar 2026 - 08:35:16 MST (-0700)
+ * Last Modified: Thu, 5 Mar 2026 - 11:18:55 MST (-0700)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -75,7 +75,7 @@ class Router
         // ── Whitelist valid actions ─────────────────────────────────────────
         $validActions = [
             'index', 'upload', 'download', 'download-multiple', 'delete',
-            'delete-multiple', 'rename', 'new', 'copy', 'move', 'paste',
+            'delete-multiple', 'trash', 'rename', 'new', 'copy', 'move', 'paste',
             'select-destination', 'execute-copy-move', 'folder-tree',
             'search', 'chmod', 'view', 'view-pdf', 'save', 'zip', 'extract',
         ];
@@ -91,6 +91,7 @@ class Router
             'download-multiple' => 'download',
             'delete' => 'delete',
             'delete-multiple' => 'delete',
+            'trash' => 'delete',  // trash reuses delete permission
             'rename' => 'rename',
             'new' => 'new_folder',
             'copy' => 'copy',
@@ -118,7 +119,7 @@ class Router
         // Read-only actions (GET allowed without CSRF):
         //   index, view, view-pdf, download, search, folder-tree, select-destination
         $stateChangingActions = [
-            'upload', 'delete', 'delete-multiple', 'rename', 'new',
+            'upload', 'delete', 'delete-multiple', 'trash', 'rename', 'new',
             'copy', 'move', 'paste', 'execute-copy-move', 'chmod',
             'save', 'zip', 'extract', 'download-multiple',
         ];
@@ -136,6 +137,7 @@ class Router
             'download-multiple' => $this->handleDownloadMultiple(),
             'delete' => $this->handleDelete(),
             'delete-multiple' => $this->handleDeleteMultiple(),
+            'trash' => $this->handleTrash(),
             'rename' => $this->handleRename(),
             'new' => $this->handleNewDirectory(),
             'copy' => $this->handleCopy(),
@@ -464,6 +466,38 @@ class Router
         }
 
         $result = $this->fileOps->deleteMultiple($items, $path);
+
+        Response::json($result);
+    }
+
+    /**
+     * Handle move to trash (AJAX)
+     * Expects POST: JSON body { items: ['file1', 'dir1'], path: 'current/path' }
+     */
+    private function handleTrash(): void
+    {
+        // POST + CSRF already enforced by handle()
+
+        if (!($this->config['trash']['enabled'] ?? true)) {
+            Response::json(['success' => false, 'message' => 'Trash is disabled'], 403);
+        }
+
+        $input = json_decode(file_get_contents('php://input'), true);
+
+        if (!$input || !isset($input['items']) || !is_array($input['items'])) {
+            Response::json(['success' => false, 'message' => 'Invalid request']);
+            return;
+        }
+
+        $items = $input['items'];
+        $path = Validator::cleanPath($input['path'] ?? '');
+
+        if (empty($items)) {
+            Response::json(['success' => false, 'message' => 'No items specified']);
+            return;
+        }
+
+        $result = $this->fileOps->trashFiles($items, $path);
 
         Response::json($result);
     }
