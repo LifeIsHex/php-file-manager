@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: FileOperations.php
  *
- * Last Modified: Thu, 5 Mar 2026 - 14:42:46 MST (-0700)
+ * Last Modified: Sat, 6 Jun 2026 - 11:51:06 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -145,6 +145,217 @@ class FileOperations
         }
 
         return $reorganized;
+    }
+
+    /**
+     * Handle a chunked upload from Dropzone.js
+     *
+     * When chunking is enabled in config (chunk_size > 0), Dropzone splits large
+     * files into chunks and sends each chunk as a separate POST request with
+     * metadata (dzuuid, dzchunkindex, dztotalchunkcount, etc.).
+     *
+     * This method stores each chunk temporarily and reassembles the final file
+     * when the last chunk arrives, then applies the same validation rules as
+     * a normal upload.
+     *
+     * @param array  $files           The $_FILES array for this chunk
+     * @param string $destinationPath Relative path within root where the final file goes
+     * @param string $uuid            Unique upload identifier (dzuuid)
+     * @param int    $chunkIndex      0-based index of this chunk (dzchunkindex)
+     * @param int    $totalChunks     Total number of chunks (dztotalchunkcount)
+     * @param int    $totalFileSize   Total file size in bytes (dztotalfilesize)
+     * @return array Result array with success, message, uploaded, errors keys
+     */
+    public function handleChunkedUpload(
+        array  $files,
+        string $destinationPath,
+        string $uuid,
+        int    $chunkIndex,
+        int    $totalChunks,
+        int    $totalFileSize,
+    ): array {
+        // Validate UUID format to prevent path traversal (Dropzone uses v4 UUID)
+        if (!preg_match('/^[a-f0-9\-]{20,60}$/i', $uuid)) {
+            return ['success' => false, 'message' => 'Invalid upload identifier', 'uploaded' => 0, 'errors' => []];
+        }
+
+        // Validate chunk parameters
+        if ($chunkIndex < 0 || $totalChunks < 1 || $chunkIndex >= $totalChunks) {
+            return ['success' => false, 'message' => 'Invalid chunk parameters', 'uploaded' => 0, 'errors' => []];
+        }
+
+        // Get the uploaded chunk data
+        $chunkTmpName = is_array($files['tmp_name']) ? $files['tmp_name'][0] : $files['tmp_name'];
+        $originalName = is_array($files['name']) ? $files['name'][0] : $files['name'];
+
+        if (empty($chunkTmpName) || !is_uploaded_file($chunkTmpName)) {
+            return ['success' => false, 'message' => 'No chunk data received', 'uploaded' => 0, 'errors' => []];
+        }
+
+        // Validate total file size against config limit
+        $maxSize = $this->config['upload']['max_file_size'] ?? 50 * 1024 * 1024;
+        if ($totalFileSize > $maxSize) {
+            return ['success' => false, 'message' => 'File too large', 'uploaded' => 0, 'errors' => []];
+        }
+
+        // Validate extension early — reject before storing any chunks
+        $allowedExtensions = $this->config['upload']['allowed_extensions'] ?? ['*'];
+        if (!Validator::isAllowedExtension($originalName, $allowedExtensions)) {
+            return ['success' => false, 'message' => 'File type not allowed', 'uploaded' => 0, 'errors' => []];
+        }
+
+        // Create chunk storage directory
+        $chunkDir = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'fm_chunks' . DIRECTORY_SEPARATOR . $uuid;
+        if (!is_dir($chunkDir) && !mkdir($chunkDir, 0755, true)) {
+            return ['success' => false, 'message' => 'Failed to create chunk storage', 'uploaded' => 0, 'errors' => []];
+        }
+
+        // Store this chunk with zero-padded index for correct ordering
+        $chunkPath = $chunkDir . DIRECTORY_SEPARATOR . 'chunk_' . str_pad((string)$chunkIndex, 6, '0', STR_PAD_LEFT);
+        if (!move_uploaded_file($chunkTmpName, $chunkPath)) {
+            return ['success' => false, 'message' => 'Failed to store chunk', 'uploaded' => 0, 'errors' => []];
+        }
+
+        // Periodically clean up stale chunk directories from abandoned uploads
+        $this->cleanupStaleChunks();
+
+        // If not the last chunk, return success and wait for more
+        if ($chunkIndex < $totalChunks - 1) {
+            return [
+                'success' => true,
+                'message' => 'Chunk received',
+                'uploaded' => 0,
+                'errors' => [],
+            ];
+        }
+
+        // ── Last chunk received — reassemble the file ──────────────────────
+
+        // Verify all chunks are present
+        for ($i = 0; $i < $totalChunks; $i++) {
+            $partPath = $chunkDir . DIRECTORY_SEPARATOR . 'chunk_' . str_pad((string)$i, 6, '0', STR_PAD_LEFT);
+            if (!file_exists($partPath)) {
+                $this->cleanupChunkDirectory($chunkDir);
+                return ['success' => false, 'message' => "Missing chunk $i of $totalChunks", 'uploaded' => 0, 'errors' => []];
+            }
+        }
+
+        // Assemble chunks into a single temporary file
+        $assembledPath = $chunkDir . DIRECTORY_SEPARATOR . 'assembled';
+        $output = fopen($assembledPath, 'wb');
+        if (!$output) {
+            $this->cleanupChunkDirectory($chunkDir);
+            return ['success' => false, 'message' => 'Failed to assemble file', 'uploaded' => 0, 'errors' => []];
+        }
+
+        for ($i = 0; $i < $totalChunks; $i++) {
+            $partPath = $chunkDir . DIRECTORY_SEPARATOR . 'chunk_' . str_pad((string)$i, 6, '0', STR_PAD_LEFT);
+            $chunk = fopen($partPath, 'rb');
+            if ($chunk) {
+                stream_copy_to_stream($chunk, $output);
+                fclose($chunk);
+            }
+        }
+        fclose($output);
+
+        // Move assembled file to final destination (same rules as normal upload)
+        $result = $this->moveAssembledFile($assembledPath, $originalName, $destinationPath);
+
+        // Cleanup chunk directory regardless of success/failure
+        $this->cleanupChunkDirectory($chunkDir);
+
+        return $result;
+    }
+
+    /**
+     * Move an assembled chunked file to its final destination.
+     * Applies the same sanitization and duplicate-naming rules as upload().
+     */
+    private function moveAssembledFile(string $assembledPath, string $originalName, string $destinationPath): array
+    {
+        $cleanPath = Validator::cleanPath($destinationPath);
+        $uploadPath = $this->rootPath . ($cleanPath ? DIRECTORY_SEPARATOR . $cleanPath : '');
+
+        if (!is_dir($uploadPath) || !Validator::isWithinRoot($uploadPath, $this->rootPath)) {
+            return ['success' => false, 'message' => 'Invalid upload path', 'uploaded' => 0, 'errors' => []];
+        }
+
+        $sanitizedFilename = Validator::sanitizeFilename($originalName);
+        $targetPath = $uploadPath . DIRECTORY_SEPARATOR . $sanitizedFilename;
+
+        // Handle duplicate names (same logic as upload())
+        if (file_exists($targetPath)) {
+            $info = pathinfo($sanitizedFilename);
+            $base = $info['filename'];
+            $ext = isset($info['extension']) ? '.' . $info['extension'] : '';
+            $counter = 1;
+
+            while (file_exists($targetPath)) {
+                $sanitizedFilename = $base . '_' . $counter . $ext;
+                $targetPath = $uploadPath . DIRECTORY_SEPARATOR . $sanitizedFilename;
+                $counter++;
+            }
+        }
+
+        if (rename($assembledPath, $targetPath)) {
+            chmod($targetPath, 0644);
+            return [
+                'success' => true,
+                'uploaded' => 1,
+                'errors' => [],
+                'message' => "Uploaded $sanitizedFilename",
+            ];
+        }
+
+        return ['success' => false, 'message' => 'Failed to save assembled file', 'uploaded' => 0, 'errors' => []];
+    }
+
+    /**
+     * Remove a chunk directory and all its contents
+     */
+    private function cleanupChunkDirectory(string $chunkDir): void
+    {
+        if (!is_dir($chunkDir)) {
+            return;
+        }
+
+        $files = glob($chunkDir . DIRECTORY_SEPARATOR . '*');
+        if ($files) {
+            foreach ($files as $file) {
+                if (is_file($file)) {
+                    @unlink($file);
+                }
+            }
+        }
+
+        @rmdir($chunkDir);
+    }
+
+    /**
+     * Clean up stale chunk directories from abandoned uploads.
+     * Removes any chunk directories older than 6 hours to prevent disk waste.
+     */
+    private function cleanupStaleChunks(): void
+    {
+        $chunksRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'fm_chunks';
+
+        if (!is_dir($chunksRoot)) {
+            return;
+        }
+
+        $maxAge = 6 * 3600; // 6 hours
+        $now = time();
+
+        $dirs = glob($chunksRoot . DIRECTORY_SEPARATOR . '*', GLOB_ONLYDIR);
+        if (!$dirs) {
+            return;
+        }
+
+        foreach ($dirs as $dir) {
+            if ($now - filemtime($dir) > $maxAge) {
+                $this->cleanupChunkDirectory($dir);
+            }
+        }
     }
 
     /**

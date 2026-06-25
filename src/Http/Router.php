@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Router.php
  *
- * Last Modified: Thu, 5 Mar 2026 - 14:37:02 MST (-0700)
+ * Last Modified: Sat, 6 Jun 2026 - 11:58:43 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -77,7 +77,7 @@ class Router
             'index', 'upload', 'download', 'download-multiple', 'delete',
             'delete-multiple', 'trash', 'rename', 'new', 'copy', 'move', 'paste',
             'select-destination', 'execute-copy-move', 'folder-tree',
-            'search', 'chmod', 'view', 'view-pdf', 'save', 'zip', 'extract',
+            'search', 'chmod', 'view', 'view-pdf', 'image', 'save', 'zip', 'extract',
         ];
 
         if (!in_array($action, $validActions, true)) {
@@ -102,6 +102,7 @@ class Router
             'chmod' => 'permissions',
             'view' => 'view',
             'view-pdf' => 'view_pdf',
+            'image' => 'view',
             'save' => 'rename',  // save edits requires rename-level access
             'zip' => 'zip',
             'extract' => 'extract',
@@ -150,6 +151,7 @@ class Router
             'chmod' => $this->handleChmod(),
             'view' => $this->handleView(),
             'view-pdf' => $this->handleViewPdf(),
+            'image' => $this->handleImage(),
             'save' => $this->handleSave(),
             'zip' => $this->handleZip(),
             'extract' => $this->handleExtract(),
@@ -320,7 +322,23 @@ class Router
         }
 
         if ($hasFiles) {
-            $result = $this->fileOps->upload($uploadFiles, $currentPath);
+            // Detect chunked upload — Dropzone sends dzuuid with each chunk
+            $dzuuid = $this->request->post('dzuuid');
+
+            if ($dzuuid !== null && $dzuuid !== '') {
+                // Chunked upload: store/reassemble chunks
+                $result = $this->fileOps->handleChunkedUpload(
+                    $uploadFiles,
+                    $currentPath,
+                    $dzuuid,
+                    (int)$this->request->post('dzchunkindex', '0'),
+                    (int)$this->request->post('dztotalchunkcount', '1'),
+                    (int)$this->request->post('dztotalfilesize', '0')
+                );
+            } else {
+                // Standard single-request upload
+                $result = $this->fileOps->upload($uploadFiles, $currentPath);
+            }
 
             // Check if this is an AJAX request (Dropzone)
             if (
@@ -839,6 +857,66 @@ class Router
 
         // Output the PDF file
         readfile($fullPath);
+        exit;
+    }
+
+    /**
+     * Handle raw image streaming (for lightbox/hover preview)
+     *
+     * Streams the image binary with correct Content-Type header.
+     * Unlike handleView(), this returns raw image data — no HTML wrapper.
+     * Supports HEIC→JPEG conversion for browser compatibility.
+     */
+    private function handleImage(): void
+    {
+        $currentPath = Validator::cleanPath($this->request->get('p', ''));
+        $filename = $this->request->get('file', '');
+
+        if (empty($filename) || !Validator::isValidFileName($filename)) {
+            Response::error('Invalid file name', 400);
+            return;
+        }
+
+        $fileInfo = $this->fileOps->getFileInfo($currentPath, $filename);
+
+        if (!$fileInfo) {
+            Response::error('File not found', 404);
+            return;
+        }
+
+        $fullPath = $fileInfo['full_path'];
+        $mimeType = $fileInfo['mime_type'];
+        $isHeic = $fileInfo['is_heic'] ?? false;
+
+        // Verify it's an image
+        if (!$fileInfo['is_image'] && !$isHeic) {
+            Response::error('Not an image file', 400);
+            return;
+        }
+
+        // Clear output buffer
+        if (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        if ($isHeic) {
+            // Convert HEIC to JPEG for browser compatibility
+            $jpegData = $this->fileOps->convertHeicToJpeg($fullPath);
+            if ($jpegData) {
+                header('Content-Type: image/jpeg');
+                header('Content-Length: ' . strlen($jpegData));
+                header('Cache-Control: private, max-age=3600');
+                echo $jpegData;
+            } else {
+                Response::error('Failed to convert HEIC image', 500);
+            }
+        } else {
+            header('Content-Type: ' . $mimeType);
+            header('Content-Length: ' . filesize($fullPath));
+            header('Cache-Control: private, max-age=3600');
+            readfile($fullPath);
+        }
+
         exit;
     }
 

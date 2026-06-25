@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: FileManagerService.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 18:43:16 MST (-0700)
+ * Last Modified: Mon, 1 Jun 2026 - 16:01:31 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -96,7 +96,7 @@ class FileManagerService
             'upload' => [
                 'max_file_size' => 50 * 1024 * 1024,
                 'allowed_extensions' => ['*'],
-                'chunk_size' => 1024 * 1024,
+                'chunk_size' => 0, // Set to 0 to disable chunking. defualt 1024 * 1024 (1MB)
             ],
             'security' => [
                 'csrf_protection' => true,

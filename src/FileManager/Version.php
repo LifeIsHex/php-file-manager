@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Version.php
  *
- * Last Modified: Thu, 5 Mar 2026 - 11:33:32 MST (-0700)
+ * Last Modified: Thu, 25 Jun 2026 - 09:41:29 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -22,5 +22,5 @@ class Version
     /**
      * Current application version
      */
-    public const VERSION = '1.1.0';
+    public const VERSION = '1.2.0';
 }

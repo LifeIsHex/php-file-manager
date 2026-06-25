@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: index.php
  *
- * Last Modified: Thu, 5 Mar 2026 - 15:00:55 MST (-0700)
+ * Last Modified: Thu, 25 Jun 2026 - 09:50:23 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -28,19 +28,15 @@ $_visibleCols = 3 + (int)$showSize + (int)$showOwner + (int)$showModified + (int
 // Configured trash folder name (used to protect it from UI delete/rename at root level)
 $_trashEnabled = $config['trash']['enabled'] ?? true;
 $_trashFolderName = $_trashEnabled ? ($config['trash']['folder_name'] ?? '.trash') : null;
+// True when the user is browsing inside the trash folder (root or any nested level).
+// Used to suppress the "Move to Trash" action — you can't trash items that are already in the trash.
+$_isInsideTrash = $_trashEnabled && $_trashFolderName !== null
+    && ($currentPath === $_trashFolderName
+        || str_starts_with($currentPath, $_trashFolderName . '/'));
 
 ob_start();
 ?>
-    <!-- Column visibility flags for JS -->
-    <script>
-        window.FM_COLUMNS = {
-            size: <?= $showSize ? 'true' : 'false' ?>,
-            owner: <?= $showOwner ? 'true' : 'false' ?>,
-            modified: <?= $showModified ? 'true' : 'false' ?>,
-            permissions: <?= $showPermissions ? 'true' : 'false' ?>,
-            total: <?= $_visibleCols ?>
-        };
-    </script>
+
 
     <!-- Breadcrumb Navigation -->
     <nav class="breadcrumb" aria-label="breadcrumbs">
@@ -209,7 +205,7 @@ ob_start();
                                 <input type="checkbox" class="item-checkbox" value="<?= Validator::escape($dir['name']) ?>">
                             </label>
                         </td>
-                        <td>
+                        <td class="file-name-cell">
                             <a href="?p=<?= urlencode($currentPath ? $currentPath . '/' . $dir['name'] : $dir['name']) ?>"
                                class="has-text-link">
                                 <i class="fas <?= Validator::escape($dir['icon']) ?> mr-2 has-text-info"></i>
@@ -290,7 +286,7 @@ ob_start();
                                 <input type="checkbox" class="item-checkbox" value="<?= Validator::escape($file['name']) ?>">
                             </label>
                         </td>
-                        <td>
+                        <td class="file-name-cell">
                             <i class="fas <?= Validator::escape($file['icon']) ?> mr-2"></i>
                             <?= Validator::escape($file['name']) ?>
                         </td>
@@ -321,10 +317,22 @@ ob_start();
                                     </a>
                                 <?php endif; ?>
                                 <?php if ($permissions->can('view')): ?>
-                                    <a href="?action=view&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($file['name']) ?>"
-                                       class="button is-success">
-                                        <i class="fas fa-eye"></i>
-                                    </a>
+                                    <?php
+                                    $_fileExt = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                                    $_isImageFile = in_array($_fileExt, ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'heic', 'heif'], true);
+                                    ?>
+                                    <?php if ($_isImageFile): ?>
+                                        <button class="button is-success"
+                                                onclick="openLightbox('<?= Validator::escape($file['name']) ?>')"
+                                                title="View Image">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    <?php else: ?>
+                                        <a href="?action=view&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($file['name']) ?>"
+                                           class="button is-success">
+                                            <i class="fas fa-eye"></i>
+                                        </a>
+                                    <?php endif; ?>
                                 <?php endif; ?>
                                 <?php if ($permissions->can('download')): ?>
                                     <a href="?action=download&p=<?= urlencode($currentPath) ?>&file=<?= urlencode($file['name']) ?>"
@@ -535,11 +543,15 @@ ob_start();
                 </div>
                 <div class="notification is-warning is-light mt-4">
                     <i class="fas fa-info-circle mr-2"></i>
-                    Permanent deletion <strong>cannot be undone</strong>. Use <em>Move to Trash</em> to recover files later.
+                    <?php if ($_isInsideTrash): ?>
+                        You are inside the trash folder. Items deleted here are removed <strong>permanently</strong>.
+                    <?php else: ?>
+                        Permanent deletion <strong>cannot be undone</strong>. Use <em>Move to Trash</em> to recover files later.
+                    <?php endif; ?>
                 </div>
             </section>
             <footer class="modal-card-foot" style="flex-wrap: wrap; gap: 0.5rem;">
-                <?php if ($config['trash']['enabled'] ?? true): ?>
+                <?php if (($config['trash']['enabled'] ?? true) && !$_isInsideTrash): ?>
                     <button class="button is-warning" onclick="confirmDelete('trash')">
                         <i class="fas fa-trash-restore mr-2"></i>
                         Move to Trash
@@ -553,10 +565,21 @@ ob_start();
             </footer>
         </div>
     </div>
+    <?php
+    // Build list of image files in current directory for lightbox slideshow
+    $_imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp', 'heic', 'heif'];
+    $_imageFiles = [];
+    foreach ($contents['files'] as $_file) {
+        $_ext = strtolower(pathinfo($_file['name'], PATHINFO_EXTENSION));
+        if (in_array($_ext, $_imageExtensions, true)) {
+            $_imageFiles[] = $_file['name'];
+        }
+    }
+    ?>
     <script>
-        window.FM_TRASH_ENABLED = <?= ($config['trash']['enabled'] ?? true) ? 'true' : 'false' ?>;
-        window.FM_TRASH_FOLDER_NAME = <?= json_encode($_trashFolderName ?? null) ?>;
-        window.FM_CURRENT_PATH = <?= json_encode($currentPath) ?>;
+        window.FM_CONFIG = window.FM_CONFIG || {};
+        window.FM_CONFIG.currentPath = <?= json_encode($currentPath) ?>;
+        window.FM_CONFIG.images = <?= json_encode($_imageFiles) ?>;
     </script>
 
     <!-- Move Confirmation Modal (for drag-drop) -->
@@ -839,6 +862,27 @@ ob_start();
             </footer>
         </div>
     </div>
+
+    <!-- Lightbox Dialog (native <dialog> for image slideshow) -->
+    <dialog id="lightboxDialog" class="lightbox-dialog">
+        <div class="lightbox-container">
+            <button class="lightbox-close" onclick="closeLightbox()" title="Close (Esc)">
+                <i class="fas fa-times"></i>
+            </button>
+            <button class="lightbox-nav lightbox-prev" onclick="lightboxPrev()" title="Previous (←)">
+                <i class="fas fa-chevron-left"></i>
+            </button>
+            <img id="lightboxImage" class="lightbox-image" src="" alt="">
+            <button class="lightbox-nav lightbox-next" onclick="lightboxNext()" title="Next (→)">
+                <i class="fas fa-chevron-right"></i>
+            </button>
+            <div class="lightbox-info">
+                <span id="lightboxFilename" class="lightbox-filename"></span>
+                <span class="lightbox-separator"></span>
+                <span id="lightboxCounter" class="lightbox-counter"></span>
+            </div>
+        </div>
+    </dialog>
 
 <?php
 $content = ob_get_clean();

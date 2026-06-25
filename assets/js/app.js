@@ -4,7 +4,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: app.js
  *
- * Last Modified: Thu, 5 Mar 2026 - 15:00:11 MST (-0700)
+ * Last Modified: Thu, 25 Jun 2026 - 10:10:48 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -143,10 +143,22 @@ function initializeDropzone() {
     const params = new URLSearchParams(window.location.search);
     const currentPath = params.get('p') || '';
 
+    const uploadConfig = window.FM_CONFIG?.upload || {};
+    const maxFileSize = uploadConfig.maxFileSize || 50; // MB
+    const chunkSize = uploadConfig.chunkSize || (1024 * 1024); // bytes
+    const chunkingEnabled = uploadConfig.chunking !== false;
+    // console.log(uploadConfig);
+
+    // Destroy any auto-discovered instance that Dropzone may have created
+    const el = document.getElementById('dropzoneUpload');
+    if (el && el.dropzone) {
+        el.dropzone.destroy();
+    }
+
     dropzoneInstance = new Dropzone('#dropzoneUpload', {
         url: '?action=upload',
         paramName: 'upload',
-        maxFilesize: 50, // MB
+        maxFilesize: maxFileSize,
         parallelUploads: 5,
         // Note: uploadMultiple cannot be used with chunking, so we use single file uploads
         // but allow multiple files to be queued
@@ -161,13 +173,17 @@ function initializeDropzone() {
         dictCancelUpload: 'Cancel upload',
         dictCancelUploadConfirmation: 'Are you sure you want to cancel this upload?',
 
-        // Chunked upload configuration
-        chunking: true,
-        forceChunking: true,
-        chunkSize: 1048576, // 1MB - matches config chunk_size
+        // Chunked upload configuration - controlled by PHP config chunk_size
+        chunking: chunkingEnabled,
+        forceChunking: chunkingEnabled,
+        chunkSize: chunkSize,
         parallelChunkUploads: false,
+        // retryChunks: true,
+        // retryChunksLimit: 3,
 
         init: function () {
+            let hadUploadError = false;
+
             this.on('sending', function (file, xhr, formData) {
                 const params = new URLSearchParams(window.location.search);
                 formData.append('p', params.get('p') || '');
@@ -178,12 +194,35 @@ function initializeDropzone() {
                 console.log('Upload successful:', file.name);
             });
 
-            this.on('error', function (file, errorMessage) {
+            this.on('error', function (file, errorMessage, xhr) {
+                hadUploadError = true;
                 console.error('Upload error:', errorMessage);
+
+                // Normalize the message: Dropzone passes either a string
+                // (client-side, e.g. file too big) or the server JSON response.
+                let message;
+                if (typeof errorMessage === 'string') {
+                    message = errorMessage;
+                } else if (errorMessage && typeof errorMessage === 'object') {
+                    message = errorMessage.message || errorMessage.error || 'Upload failed';
+                } else {
+                    message = 'Upload failed';
+                }
+
+                // Prefix with the filename so the user knows which file failed
+                // when several files are queued.
+                const prefix = file && file.name ? file.name + ': ' : '';
+                showToast(prefix + message, 'error');
             });
 
             this.on('queuecomplete', function () {
                 console.log('All uploads completed');
+                // If any file failed, skip the auto-reload so the user has
+                // time to read the error toast(s). They can refresh manually.
+                if (hadUploadError) {
+                    hadUploadError = false;
+                    return;
+                }
                 setTimeout(() => {
                     window.location.reload();
                 }, 1000);
@@ -227,7 +266,7 @@ function updateSearchResults(data, query) {
     if (data.directories.length === 0 && data.files.length === 0) {
         const noResultsRow = document.createElement('tr');
         noResultsRow.className = 'file-row';
-        const cols = (window.FM_COLUMNS && window.FM_COLUMNS.total) ? window.FM_COLUMNS.total : 7;
+        const cols = (window.FM_CONFIG?.columns && window.FM_CONFIG.columns.total) ? window.FM_CONFIG.columns.total : 7;
         noResultsRow.innerHTML = `
             <td colspan="${cols}" class="has-text-centered has-text-grey">
                 <i class="fas fa-search fa-2x mb-3"></i>
@@ -404,7 +443,7 @@ function createSearchResultRow(item, type) {
     const currentPath = params.get('p') || '';
 
     // Read column visibility from the PHP-emitted config (default all visible)
-    const showCols = window.FM_COLUMNS || {size: true, owner: true, modified: true, permissions: true};
+    const showCols = window.FM_CONFIG?.columns || {size: true, owner: true, modified: true, permissions: true};
 
     let checkbox = `<td><input type="checkbox" class="file-checkbox" data-name="${escapeHtml(item.name)}"></td>`;
 
@@ -1289,6 +1328,16 @@ function copyToClipboard(items = null, operation = 'copy') {
         return;
     }
 
+    // Block cutting the trash folder — it lives at the root and cannot be moved.
+    // (Copying it is harmless, so only guard cut.)
+    if (operation === 'cut') {
+        const trashFolderName = window.FM_CONFIG?.trash?.folderName;
+        if (trashFolderName && !getCurrentPath() && itemsToCopy.includes(trashFolderName)) {
+            showToast('The trash folder cannot be moved.', 'warning');
+            return;
+        }
+    }
+
     Clipboard.set(itemsToCopy, operation, getCurrentPath());
     showToast(`${itemsToCopy.length} item(s) ${operation === 'cut' ? 'cut' : 'copied'} to clipboard`, 'success');
 }
@@ -1422,9 +1471,18 @@ async function confirmDelete(mode = 'permanent') {
     closeDeleteModal();
 
     // Branch: trash vs permanent delete
-    if (mode === 'trash' && window.FM_TRASH_ENABLED) {
+    // Note: when the user is already browsing inside the trash folder we refuse the
+    // trash action — moving an item to trash from within trash would either error
+    // (server refuses) or create a nested trash folder. The UI hides the "Move to
+    // Trash" button in that case; this is just a defensive net.
+    const trashCfg = window.FM_CONFIG?.trash;
+    if (mode === 'trash' && trashCfg?.enabled && !trashCfg?.insideTrash) {
         await trashItems(itemsToDelete, currentPath);
         return;
+    }
+    if (mode === 'trash' && trashCfg?.insideTrash) {
+        showToast('Items inside the trash folder are deleted permanently.', 'warning');
+        // fall through to permanent delete below
     }
 
     // ── Permanent delete ──────────────────────────────────────────────────
@@ -1701,13 +1759,7 @@ function contextMenuAction(action) {
 
         case 'cut':
             // Use new Clipboard system - cut single item or selected items
-            // Block cutting the trash folder (it cannot be moved)
-            if (window.FM_TRASH_FOLDER_NAME
-                && !window.FM_CURRENT_PATH
-                && contextMenuItem === window.FM_TRASH_FOLDER_NAME) {
-                showToast('The trash folder cannot be moved.', 'warning');
-                break;
-            }
+            // (trash-folder protection is enforced inside copyToClipboard)
             const selectedForCut = getSelectedItems();
             if (selectedForCut.length > 0 && selectedForCut.includes(contextMenuItem)) {
                 copyToClipboard(selectedForCut, 'cut');
@@ -1761,9 +1813,293 @@ document.addEventListener('DOMContentLoaded', function () {
     initContextMenu();
     initKeyboardShortcuts();
     Clipboard.updateUI(); // Update paste button visibility on page load
+    initHoverPreview();
 });
 
 // Toolbar Paste Function (for toolbar button)
 function performToolbarPaste() {
     pasteFromClipboard();
+}
+
+// ============================================
+// LIGHTBOX SLIDESHOW
+// ============================================
+
+let lightboxCurrentIndex = 0;
+
+/**
+ * Build the image URL for the lightbox/hover preview endpoint
+ */
+function getImageUrl(filename) {
+    const baseUrl = window.FM_CONFIG?.baseUrl || '';
+    const currentPath = window.FM_CONFIG?.currentPath || '';
+    const params = new URLSearchParams({
+        action: 'image',
+        p: currentPath,
+        file: filename
+    });
+    return baseUrl + '?' + params.toString();
+}
+
+/**
+ * Open the lightbox dialog showing the given image
+ */
+function openLightbox(filename) {
+    const images = window.FM_CONFIG?.images || [];
+    if (images.length === 0) return;
+
+    const index = images.indexOf(filename);
+    if (index === -1) return;
+
+    lightboxCurrentIndex = index;
+
+    const dialog = document.getElementById('lightboxDialog');
+    if (!dialog) return;
+
+    // Set image count for CSS (hides nav when count=1)
+    dialog.setAttribute('data-count', images.length);
+
+    loadLightboxImage(index);
+    dialog.showModal();
+
+    // Preload adjacent images
+    preloadAdjacentImages(index);
+}
+
+/**
+ * Close the lightbox dialog
+ */
+function closeLightbox() {
+    const dialog = document.getElementById('lightboxDialog');
+    if (dialog && dialog.open) {
+        dialog.close();
+    }
+}
+
+/**
+ * Navigate to the next image (wraps around)
+ */
+function lightboxNext() {
+    const images = window.FM_CONFIG?.images || [];
+    if (images.length <= 1) return;
+
+    lightboxCurrentIndex = (lightboxCurrentIndex + 1) % images.length;
+    loadLightboxImage(lightboxCurrentIndex);
+    preloadAdjacentImages(lightboxCurrentIndex);
+}
+
+/**
+ * Navigate to the previous image (wraps around)
+ */
+function lightboxPrev() {
+    const images = window.FM_CONFIG?.images || [];
+    if (images.length <= 1) return;
+
+    lightboxCurrentIndex = (lightboxCurrentIndex - 1 + images.length) % images.length;
+    loadLightboxImage(lightboxCurrentIndex);
+    preloadAdjacentImages(lightboxCurrentIndex);
+}
+
+/**
+ * Load a specific image into the lightbox
+ */
+function loadLightboxImage(index) {
+    const images = window.FM_CONFIG?.images || [];
+    if (index < 0 || index >= images.length) return;
+
+    const img = document.getElementById('lightboxImage');
+    const filenameEl = document.getElementById('lightboxFilename');
+    const counterEl = document.getElementById('lightboxCounter');
+
+    if (!img) return;
+
+    const filename = images[index];
+
+    // Show loading state
+    img.classList.add('loading');
+
+    // Update info bar
+    if (filenameEl) filenameEl.textContent = filename;
+    if (counterEl) counterEl.textContent = (index + 1) + ' / ' + images.length;
+
+    // Load the image
+    img.onload = function () {
+        img.classList.remove('loading');
+    };
+    img.onerror = function () {
+        img.classList.remove('loading');
+        img.alt = 'Failed to load: ' + filename;
+    };
+
+    img.src = getImageUrl(filename);
+    img.alt = filename;
+}
+
+/**
+ * Preload the next and previous images for smooth navigation
+ */
+function preloadAdjacentImages(index) {
+    const images = window.FM_CONFIG?.images || [];
+    if (images.length <= 1) return;
+
+    const nextIndex = (index + 1) % images.length;
+    const prevIndex = (index - 1 + images.length) % images.length;
+
+    // Preload next
+    const nextImg = new Image();
+    nextImg.src = getImageUrl(images[nextIndex]);
+
+    // Preload previous
+    if (prevIndex !== nextIndex) {
+        const prevImg = new Image();
+        prevImg.src = getImageUrl(images[prevIndex]);
+    }
+}
+
+// Keyboard navigation for lightbox
+document.addEventListener('keydown', function (e) {
+    const dialog = document.getElementById('lightboxDialog');
+    if (!dialog || !dialog.open) return;
+
+    switch (e.key) {
+        case 'ArrowRight':
+            e.preventDefault();
+            lightboxNext();
+            break;
+        case 'ArrowLeft':
+            e.preventDefault();
+            lightboxPrev();
+            break;
+        case 'Escape':
+            // Native <dialog> handles Escape close, but we catch it
+            // to prevent any event propagation issues
+            break;
+    }
+});
+
+// Click on backdrop (outside the image) to close
+document.addEventListener('DOMContentLoaded', function () {
+    const dialog = document.getElementById('lightboxDialog');
+    if (dialog) {
+        dialog.addEventListener('click', function (e) {
+            // Close if clicking directly on the dialog backdrop (not its children)
+            if (e.target === dialog) {
+                closeLightbox();
+            }
+        });
+    }
+});
+
+// ============================================
+// HOVER PREVIEW TOOLTIP
+// ============================================
+
+let hoverPreviewEl = null;
+let hoverPreviewTimeout = null;
+
+/**
+ * Initialize hover preview for image file rows
+ */
+function initHoverPreview() {
+    const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'svg', 'webp'];
+    const fileRows = document.querySelectorAll('.file-row');
+
+    fileRows.forEach(function (row) {
+        // Get the filename from the checkbox or the row text
+        const checkbox = row.querySelector('.item-checkbox, .file-checkbox');
+        if (!checkbox) return;
+
+        const filename = checkbox.value;
+        const ext = filename.split('.').pop().toLowerCase();
+
+        // Only attach to image files (skip HEIC — too slow to convert on hover)
+        if (!imageExtensions.includes(ext)) return;
+
+        // Scope the hover preview to the name cell only, so hovering the
+        // action buttons (or other columns) does not trigger the popup.
+        const target = row.querySelector('.file-name-cell') || row;
+
+        target.addEventListener('mouseenter', function (e) {
+            clearTimeout(hoverPreviewTimeout);
+            hoverPreviewTimeout = setTimeout(function () {
+                showHoverPreview(filename, e);
+            }, 200);
+        });
+
+        target.addEventListener('mousemove', function (e) {
+            if (hoverPreviewEl && hoverPreviewEl.classList.contains('visible')) {
+                positionHoverPreview(e);
+            }
+        });
+
+        target.addEventListener('mouseleave', function () {
+            clearTimeout(hoverPreviewTimeout);
+            hideHoverPreview();
+        });
+    });
+}
+
+/**
+ * Show the hover preview tooltip
+ */
+function showHoverPreview(filename, event) {
+    // Remove any existing preview
+    hideHoverPreview();
+
+    hoverPreviewEl = document.createElement('div');
+    hoverPreviewEl.className = 'hover-preview';
+
+    const img = document.createElement('img');
+    img.src = getImageUrl(filename);
+    img.alt = filename;
+    img.onload = function () {
+        hoverPreviewEl.classList.add('visible');
+    };
+
+    hoverPreviewEl.appendChild(img);
+    document.body.appendChild(hoverPreviewEl);
+
+    positionHoverPreview(event);
+}
+
+/**
+ * Position the hover preview near the cursor
+ */
+function positionHoverPreview(event) {
+    if (!hoverPreviewEl) return;
+
+    const offset = 16;
+    let left = event.clientX + offset;
+    let top = event.clientY + offset;
+
+    // Keep within viewport
+    const maxWidth = 220;
+    const maxHeight = 220;
+
+    if (left + maxWidth > window.innerWidth) {
+        left = event.clientX - maxWidth - offset;
+    }
+    if (top + maxHeight > window.innerHeight) {
+        top = event.clientY - maxHeight - offset;
+    }
+
+    hoverPreviewEl.style.left = left + 'px';
+    hoverPreviewEl.style.top = top + 'px';
+}
+
+/**
+ * Hide and remove the hover preview tooltip
+ */
+function hideHoverPreview() {
+    if (hoverPreviewEl) {
+        hoverPreviewEl.classList.remove('visible');
+        // Remove after fade-out transition
+        const el = hoverPreviewEl;
+        setTimeout(function () {
+            if (el.parentNode) {
+                el.parentNode.removeChild(el);
+            }
+        }, 200);
+        hoverPreviewEl = null;
+    }
 }

@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: layout.php
  *
- * Last Modified: Mon, 2 Mar 2026 - 09:11:58 MST (-0700)
+ * Last Modified: Mon, 8 Jun 2026 - 08:39:23 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -36,6 +36,7 @@ if ($assetsPath === '') {
     <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/css/custom.css">
     <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/css/context-menu.css">
     <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/css/toast.css">
+    <link rel="stylesheet" href="<?= htmlspecialchars($assetsPath) ?>/css/lightbox.css">
 </head>
 
 <body>
@@ -125,10 +126,48 @@ if (isset($flashMessage) && is_array($flashMessage)):
          data-text="<?= htmlspecialchars($flashMessage['text']) ?>" style="display: none;"></div>
 <?php endif; ?>
 
+<?php
+// Column visibility (read from config, default all visible)
+$_fmCols = $config['fm']['columns'] ?? [];
+$_fmShowSize = $_fmCols['size'] ?? true;
+$_fmShowOwner = $_fmCols['owner'] ?? true;
+$_fmShowModified = $_fmCols['modified'] ?? true;
+$_fmShowPermissions = $_fmCols['permissions'] ?? true;
+$_fmVisibleCols = 3 + (int)$_fmShowSize + (int)$_fmShowOwner + (int)$_fmShowModified + (int)$_fmShowPermissions;
+
+// Trash config
+$_fmTrashEnabled = $config['trash']['enabled'] ?? true;
+$_fmTrashFolderName = $_fmTrashEnabled ? ($config['trash']['folder_name'] ?? '.trash') : null;
+$_fmCurrentPath = $currentPath ?? '';
+$_fmInsideTrash = $_fmTrashEnabled && $_fmTrashFolderName !== null
+    && ($_fmCurrentPath === $_fmTrashFolderName
+        || str_starts_with($_fmCurrentPath, $_fmTrashFolderName . '/'));
+?>
+<script>
+    window.FM_CONFIG = Object.assign(window.FM_CONFIG || {}, {
+        upload: {
+            maxFileSize: <?= (int)(($config['upload']['max_file_size'] ?? 50 * 1024 * 1024) / (1024 * 1024)) ?>,
+            chunkSize: <?= (int)($config['upload']['chunk_size'] ?? 0) ?>,
+            chunking: <?= !empty($config['upload']['chunk_size']) ? 'true' : 'false' ?>
+        },
+        columns: {
+            size: <?= $_fmShowSize ? 'true' : 'false' ?>,
+            owner: <?= $_fmShowOwner ? 'true' : 'false' ?>,
+            modified: <?= $_fmShowModified ? 'true' : 'false' ?>,
+            permissions: <?= $_fmShowPermissions ? 'true' : 'false' ?>,
+            total: <?= $_fmVisibleCols ?>
+        },
+        trash: {
+            enabled: <?= $_fmTrashEnabled ? 'true' : 'false' ?>,
+            folderName: <?= json_encode($_fmTrashFolderName) ?>,
+            insideTrash: <?= $_fmInsideTrash ? 'true' : 'false' ?>
+        }
+    });
+</script>
 <script src="<?= htmlspecialchars($assetsPath) ?>/libs/sortable/Sortable.min.js"></script>
 <script src="<?= htmlspecialchars($assetsPath) ?>/libs/dropzone/dropzone.min.js"></script>
 <script src="<?= htmlspecialchars($assetsPath) ?>/js/toast.js"></script>
-<script src="<?= htmlspecialchars($assetsPath) ?>/js/app.js"></script>
+<script src="<?= htmlspecialchars($assetsPath) ?>/js/app.js?v=<?= time() ?>"></script>
 </body>
 
 </html>
