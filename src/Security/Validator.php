@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Validator.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 18:43:46 MST (-0700)
+ * Last Modified: Thu, 2 Jul 2026 - 09:53:27 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -120,8 +120,8 @@ class Validator
             return false;
         }
 
-        // Ensure path starts with root directory
-        return str_starts_with($realPath, $realRoot);
+        return $realPath === $realRoot
+            || str_starts_with($realPath, $realRoot . DIRECTORY_SEPARATOR);
     }
 
     /**
@@ -137,6 +137,10 @@ class Validator
 
         // Remove leading dots (hidden files)
         $filename = ltrim($filename, '.');
+
+        if ($filename === '') {
+            $filename = 'unnamed_file';
+        }
 
         return $filename;
     }

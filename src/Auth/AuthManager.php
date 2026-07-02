@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: AuthManager.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 18:41:08 MST (-0700)
+ * Last Modified: Thu, 2 Jul 2026 - 10:14:54 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -249,12 +249,7 @@ class AuthManager
         $token = bin2hex(random_bytes(32));
         $tokenHash = hash('sha256', $token);
 
-        // Store token hash and username in session
-        $_SESSION[self::REMEMBER_TOKEN_KEY] = [
-            'hash' => $tokenHash,
-            'username' => $username,
-            'created' => time(),
-        ];
+        $this->storeRememberToken($username, $tokenHash);
 
         // Create cookie with token (not hash)
         $duration = $this->config['auth']['remember_duration'] ?? 1800;
@@ -266,8 +261,8 @@ class AuthManager
             $expires,
             '/',
             '',
-            isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on', // secure
-            true // httponly
+            isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+            true
         );
     }
 
@@ -284,8 +279,7 @@ class AuthManager
         $token = $_COOKIE[self::REMEMBER_COOKIE_NAME];
         $tokenHash = hash('sha256', $token);
 
-        // Get stored token data from session
-        $storedData = $_SESSION[self::REMEMBER_TOKEN_KEY] ?? null;
+        $storedData = $this->getStoredRememberToken();
 
         if (!$storedData || !isset($storedData['hash'], $storedData['username'], $storedData['created'])) {
             $this->clearRememberMeCookie();
@@ -319,8 +313,7 @@ class AuthManager
      */
     private function clearRememberMeCookie(): void
     {
-        // Clear session data
-        unset($_SESSION[self::REMEMBER_TOKEN_KEY]);
+        $this->deleteStoredRememberToken();
 
         // Clear cookie
         if (isset($_COOKIE[self::REMEMBER_COOKIE_NAME])) {
@@ -334,5 +327,88 @@ class AuthManager
                 true
             );
         }
+    }
+
+    /**
+     * Get the file path for persistent remember-me token storage
+     */
+    private function getRememberTokenFilePath(): string
+    {
+        return sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'fm_remember_tokens.json';
+    }
+
+    /**
+     * Read all remember-me tokens from the JSON file
+     */
+    private function readTokenStore(): array
+    {
+        $path = $this->getRememberTokenFilePath();
+        if (!file_exists($path)) {
+            return [];
+        }
+        $content = @file_get_contents($path);
+        if ($content === false) {
+            return [];
+        }
+        $data = json_decode($content, true);
+        return is_array($data) ? $data : [];
+    }
+
+    /**
+     * Write remember-me tokens to the JSON file with exclusive lock
+     */
+    private function writeTokenStore(array $data): void
+    {
+        $path = $this->getRememberTokenFilePath();
+        @file_put_contents($path, json_encode($data), LOCK_EX);
+        @chmod($path, 0600);
+    }
+
+    /**
+     * Store a new remember-me token for the given username
+     */
+    private function storeRememberToken(string $username, string $tokenHash): void
+    {
+        $store = $this->readTokenStore();
+        $store[$username] = [
+            'hash' => $tokenHash,
+            'username' => $username,
+            'created' => time(),
+        ];
+        $this->writeTokenStore($store);
+    }
+
+    /**
+     * Retrieve stored token by username or by matching the cookie token
+     */
+    private function getStoredRememberToken(): ?array
+    {
+        $store = $this->readTokenStore();
+        $username = $_SESSION['fm_username'] ?? null;
+        if ($username && isset($store[$username])) {
+            return $store[$username];
+        }
+        foreach ($store as $data) {
+            if (isset($data['hash'])) {
+                $token = $_COOKIE[self::REMEMBER_COOKIE_NAME] ?? '';
+                if ($token !== '' && hash_equals($data['hash'], hash('sha256', $token))) {
+                    return $data;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Remove the remember-me token for the current user
+     */
+    private function deleteStoredRememberToken(): void
+    {
+        $store = $this->readTokenStore();
+        $username = $_SESSION['fm_username'] ?? null;
+        if ($username) {
+            unset($store[$username]);
+        }
+        $this->writeTokenStore($store);
     }
 }

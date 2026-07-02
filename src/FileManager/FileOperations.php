@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: FileOperations.php
  *
- * Last Modified: Sat, 6 Jun 2026 - 11:51:06 MDT (-0600)
+ * Last Modified: Thu, 2 Jul 2026 - 10:02:43 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -425,6 +425,10 @@ class FileOperations
 
         $addedCount = 0;
         foreach ($items as $item) {
+            if (!Validator::isValidFileName($item)) {
+                continue;
+            }
+
             // Verify item exists and is within root
             $itemPath = $sourcePath . DIRECTORY_SEPARATOR . $item;
             if (!file_exists($itemPath) || !Validator::isWithinRoot($itemPath, $this->rootPath)) {
@@ -867,12 +871,18 @@ class FileOperations
 
     /**
      * Read file content
+     * Returns null if file doesn't exist or exceeds max_file_size to prevent memory exhaustion.
      */
     public function readFile(string $relativePath, string $filename): ?string
     {
         $filepath = $this->getFullPath($relativePath, $filename);
 
         if (!$filepath || !is_file($filepath)) {
+            return null;
+        }
+
+        $maxSize = $this->config['upload']['max_file_size'] ?? 50 * 1024 * 1024;
+        if (filesize($filepath) > $maxSize) {
             return null;
         }
 
@@ -972,7 +982,7 @@ class FileOperations
         // Handle duplicate names
         $counter = 1;
         while (file_exists($zipPath)) {
-            $base = str_replace('.zip', '', $zipName);
+            $base = preg_replace('/\.zip$/i', '', $zipName);
             $zipPath = $sourcePath . DIRECTORY_SEPARATOR . $base . '_' . $counter . '.zip';
             $counter++;
         }
@@ -1535,9 +1545,10 @@ class FileOperations
         }
 
         if ($magickPath) {
+            $escapedMagick = escapeshellarg($magickPath);
             $escapedInput = escapeshellarg($filepath);
             $escapedOutput = escapeshellarg($tempFile);
-            exec("{$magickPath} {$escapedInput} -quality 90 {$escapedOutput} 2>/dev/null", $output, $returnCode);
+            exec("{$escapedMagick} {$escapedInput} -quality 90 {$escapedOutput} 2>/dev/null", $output, $returnCode);
 
             if ($returnCode === 0 && file_exists($tempFile)) {
                 $content = file_get_contents($tempFile);

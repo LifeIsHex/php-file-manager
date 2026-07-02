@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Router.php
  *
- * Last Modified: Sat, 6 Jun 2026 - 11:58:43 MDT (-0600)
+ * Last Modified: Thu, 2 Jul 2026 - 09:55:28 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -667,9 +667,19 @@ class Router
         $folders = [];
 
         if (is_dir($fullPath) && Validator::isWithinRoot($fullPath, $rootPath)) {
+            $excludeItems = $this->config['exclude_items'] ?? [];
+            $showHidden = $this->config['fm']['show_hidden'] ?? true;
             $items = scandir($fullPath);
             foreach ($items as $item) {
                 if ($item === '.' || $item === '..') {
+                    continue;
+                }
+
+                if (in_array($item, $excludeItems, true)) {
+                    continue;
+                }
+
+                if (!$showHidden && str_starts_with($item, '.')) {
                     continue;
                 }
 
@@ -789,6 +799,13 @@ class Router
         $isText = $fileInfo['is_text'];
         $isHeic = $fileInfo['is_heic'] ?? false;
 
+        // SVG files can contain embedded scripts — never display inline
+        $isSvg = strtolower(pathinfo($filename, PATHINFO_EXTENSION)) === 'svg'
+            || $mimeType === 'image/svg+xml';
+        if ($isSvg) {
+            $isImage = false;
+        }
+
         // Read file content if it's an image or text file
         $fileContent = null;
         $imageInfo = null;
@@ -888,6 +905,18 @@ class Router
         $mimeType = $fileInfo['mime_type'];
         $isHeic = $fileInfo['is_heic'] ?? false;
 
+        // SVG files can contain embedded scripts — force download instead of inline display
+        $isSvg = strtolower(pathinfo($filename, PATHINFO_EXTENSION)) === 'svg'
+            || $mimeType === 'image/svg+xml';
+        if ($isSvg) {
+            $safeFilename = Response::sanitizeHeaderFilename($filename);
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename="' . $safeFilename . '"');
+            header('Content-Length: ' . filesize($fullPath));
+            readfile($fullPath);
+            exit;
+        }
+
         // Verify it's an image
         if (!$fileInfo['is_image'] && !$isHeic) {
             Response::error('Not an image file', 400);
@@ -972,6 +1001,12 @@ class Router
         $currentPath = Validator::cleanPath($this->request->post('p', ''));
         $zipName = $this->request->post('file', '');
         $targetFolder = $this->request->post('target_folder', null);
+
+        if (empty($zipName) || !Validator::isValidFileName($zipName)) {
+            $this->session->setFlashMessage('error', 'Invalid archive name');
+            Response::redirect($this->getBaseUrl() . '?p=' . urlencode($currentPath));
+            return;
+        }
 
         $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) &&
             strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';

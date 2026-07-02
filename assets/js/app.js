@@ -4,7 +4,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: app.js
  *
- * Last Modified: Thu, 25 Jun 2026 - 10:10:48 MDT (-0600)
+ * Last Modified: Thu, 2 Jul 2026 - 10:08:13 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -270,7 +270,7 @@ function updateSearchResults(data, query) {
         noResultsRow.innerHTML = `
             <td colspan="${cols}" class="has-text-centered has-text-grey">
                 <i class="fas fa-search fa-2x mb-3"></i>
-                <p>No results found for "${query}"</p>
+                <p>No results found for "${escapeHtml(query)}"</p>
             </td>
         `;
         tbody.appendChild(noResultsRow);

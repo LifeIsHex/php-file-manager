@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: CsrfProtection.php
  *
- * Last Modified: Tue, 10 Feb 2026 - 18:43:28 MST (-0700)
+ * Last Modified: Thu, 2 Jul 2026 - 09:53:41 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -67,7 +67,19 @@ class CsrfProtection implements CsrfInterface
         }
 
         // Use hash_equals to prevent timing attacks
-        return hash_equals($sessionToken, $token);
+        $valid = hash_equals($sessionToken, $token);
+
+        if ($valid) {
+            // Rotate token after successful validation for non-AJAX requests.
+            // AJAX requests keep the same token since the page (and meta tag) won't reload.
+            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH'])
+                && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+            if (!$isAjax) {
+                $this->generateToken();
+            }
+        }
+
+        return $valid;
     }
 
     /**
