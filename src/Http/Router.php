@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Router.php
  *
- * Last Modified: Thu, 2 Jul 2026 - 09:55:28 MDT (-0600)
+ * Last Modified: Tue, 18 Aug 2026 - 09:11:57 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -74,7 +74,7 @@ class Router
 
         // ── Whitelist valid actions ─────────────────────────────────────────
         $validActions = [
-            'index', 'upload', 'download', 'download-multiple', 'delete',
+            'index', 'upload', 'cancel-upload', 'download', 'download-multiple', 'delete',
             'delete-multiple', 'trash', 'rename', 'new', 'copy', 'move', 'paste',
             'select-destination', 'execute-copy-move', 'folder-tree',
             'search', 'chmod', 'view', 'view-pdf', 'image', 'save', 'zip', 'extract',
@@ -87,6 +87,7 @@ class Router
         // Map actions to permission names
         $permissionMap = [
             'upload' => 'upload',
+            'cancel-upload' => 'upload',
             'download' => 'download',
             'download-multiple' => 'download',
             'delete' => 'delete',
@@ -120,7 +121,7 @@ class Router
         // Read-only actions (GET allowed without CSRF):
         //   index, view, view-pdf, download, search, folder-tree, select-destination
         $stateChangingActions = [
-            'upload', 'delete', 'delete-multiple', 'trash', 'rename', 'new',
+            'upload', 'cancel-upload', 'delete', 'delete-multiple', 'trash', 'rename', 'new',
             'copy', 'move', 'paste', 'execute-copy-move', 'chmod',
             'save', 'zip', 'extract', 'download-multiple',
         ];
@@ -134,6 +135,7 @@ class Router
         // Route to appropriate handler
         match ($action) {
             'upload' => $this->handleUpload(),
+            'cancel-upload' => $this->handleCancelUpload(),
             'download' => $this->handleDownload(),
             'download-multiple' => $this->handleDownloadMultiple(),
             'delete' => $this->handleDelete(),
@@ -363,6 +365,30 @@ class Router
         }
 
         Response::redirect($this->getBaseUrl() . '?p=' . urlencode($currentPath));
+    }
+
+    /**
+     * Handle chunked upload cancellation.
+     *
+     * Called by Dropzone when the user cancels or removes an in-progress
+     * upload. Wipes the chunk directory for the given dzuuid so partial
+     * chunks aren't left on disk for 6h waiting for the stale sweep.
+     */
+    private function handleCancelUpload(): void
+    {
+        $dzuuid = (string)$this->request->post('dzuuid', '');
+
+        if ($dzuuid === '') {
+            header('Content-Type: application/json', true, 400);
+            echo json_encode(['success' => false, 'message' => 'Missing dzuuid']);
+            exit;
+        }
+
+        $result = $this->fileOps->cancelChunkedUpload($dzuuid);
+
+        header('Content-Type: application/json');
+        echo json_encode($result);
+        exit;
     }
 
     /**

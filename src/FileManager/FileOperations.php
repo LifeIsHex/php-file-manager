@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: FileOperations.php
  *
- * Last Modified: Thu, 2 Jul 2026 - 10:02:43 MDT (-0600)
+ * Last Modified: Tue, 18 Aug 2026 - 09:24:19 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -308,6 +308,39 @@ class FileOperations
         }
 
         return ['success' => false, 'message' => 'Failed to save assembled file', 'uploaded' => 0, 'errors' => []];
+    }
+
+    /**
+     * Cancel an in-progress chunked upload and remove any stored chunks.
+     *
+     * Called when the client aborts a Dropzone upload (cancel/remove) so we
+     * don't leave orphaned chunk files sitting in the temp dir until the 6h
+     * stale sweep runs.
+     */
+    public function cancelChunkedUpload(string $uuid): array
+    {
+        // Validate UUID format to prevent path traversal (same rule as handleChunkedUpload)
+        if (!preg_match('/^[a-f0-9\-]{20,60}$/i', $uuid)) {
+            return ['success' => false, 'message' => 'Invalid upload identifier'];
+        }
+
+        $chunksRoot = sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'fm_chunks';
+        $chunkDir   = $chunksRoot . DIRECTORY_SEPARATOR . $uuid;
+
+        // Safety: make sure the resolved path is still inside fm_chunks
+        $realRoot = realpath($chunksRoot);
+        $realDir  = realpath($chunkDir);
+        if ($realRoot === false || $realDir === false || strpos($realDir, $realRoot) !== 0) {
+            // Nothing there (already cleaned or never created) — treat as success
+            return ['success' => true, 'message' => 'Nothing to cancel'];
+        }
+
+        $this->cleanupChunkDirectory($chunkDir);
+
+        // Opportunistically sweep any other stale chunk dirs while we're here
+        $this->cleanupStaleChunks();
+
+        return ['success' => true, 'message' => 'Upload cancelled'];
     }
 
     /**

@@ -4,7 +4,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: app.js
  *
- * Last Modified: Thu, 2 Jul 2026 - 10:08:13 MDT (-0600)
+ * Last Modified: Tue, 18 Aug 2026 - 09:24:03 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -134,6 +134,68 @@ document.addEventListener('DOMContentLoaded', () => {
 Dropzone.autoDiscover = false;
 let dropzoneInstance = null;
 
+// POST a cancel notification to the server so it can wipe any stored chunks
+// for this Dropzone upload. Safe to call multiple times; the server treats
+// a missing chunk directory as a no-op.
+//
+// If `useBeacon` is true, use navigator.sendBeacon so the request survives a
+// page unload (refresh / tab close / navigation). Otherwise use fetch with
+// keepalive for normal in-page cancel/remove events.
+function notifyCancelIfChunked(file, useBeacon) {
+    if (!file || !file.upload || !file.upload.uuid) {
+        return;
+    }
+    if (file.upload.chunked === false) {
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append('dzuuid', file.upload.uuid);
+    formData.append('csrf_token', getCsrfToken());
+
+    // Build the same URL Dropzone posts to so relative ?action= resolves correctly
+    const url = (dropzoneInstance && dropzoneInstance.options && dropzoneInstance.options.url)
+        ? dropzoneInstance.options.url.replace(/\?action=upload/, '?action=cancel-upload')
+        : '?action=cancel-upload';
+
+    if (useBeacon && navigator.sendBeacon) {
+        try {
+            navigator.sendBeacon(url, formData);
+            return;
+        } catch (e) {
+            // fall through to fetch
+        }
+    }
+
+    try {
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin',
+            keepalive: true,
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+        }).catch(err => console.warn('Cancel notify failed:', err));
+    } catch (e) {
+        console.warn('Cancel notify error:', e);
+    }
+}
+
+// On page refresh / close / navigation, tell the server to purge chunks for
+// any files that were still uploading. Uses sendBeacon so the request survives
+// the unload.
+function cancelInFlightUploadsOnUnload() {
+    if (!dropzoneInstance) return;
+    const inFlight = [
+        ...dropzoneInstance.getUploadingFiles(),
+        ...dropzoneInstance.getQueuedFiles(),
+    ];
+    inFlight.forEach(f => notifyCancelIfChunked(f, true));
+}
+
+// pagehide fires reliably on refresh, tab close, and bfcache; beforeunload as fallback
+window.addEventListener('pagehide', cancelInFlightUploadsOnUnload);
+window.addEventListener('beforeunload', cancelInFlightUploadsOnUnload);
+
 // Initialize Dropzone when modal is opened
 function initializeDropzone() {
     if (dropzoneInstance) {
@@ -190,6 +252,22 @@ function initializeDropzone() {
                 formData.append('csrf_token', getCsrfToken());
             });
 
+            // User clicked Cancel on an in-progress upload
+            this.on('canceled', function (file) {
+                notifyCancelIfChunked(file);
+            });
+
+            // User clicked Remove after upload was already cancelled/errored,
+            // or removed a queued file that had started uploading.
+            this.on('removedfile', function (file) {
+                // Only clean up if the file was actually uploading (has a
+                // server-side chunk trail). Successful uploads already clean
+                // themselves up server-side.
+                if (file && file.status !== Dropzone.SUCCESS) {
+                    notifyCancelIfChunked(file);
+                }
+            });
+
             this.on('success', function (file, response) {
                 console.log('Upload successful:', file.name);
             });
@@ -197,6 +275,10 @@ function initializeDropzone() {
             this.on('error', function (file, errorMessage, xhr) {
                 hadUploadError = true;
                 console.error('Upload error:', errorMessage);
+
+                // If this was a chunked upload, tell the server to purge any
+                // stored chunks so we don't leave partial files in the temp dir.
+                notifyCancelIfChunked(file);
 
                 // Normalize the message: Dropzone passes either a string
                 // (client-side, e.g. file too big) or the server JSON response.
