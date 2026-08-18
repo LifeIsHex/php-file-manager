@@ -4,7 +4,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: app.js
  *
- * Last Modified: Tue, 18 Aug 2026 - 09:24:03 MDT (-0600)
+ * Last Modified: Tue, 18 Aug 2026 - 09:32:01 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -145,9 +145,10 @@ function notifyCancelIfChunked(file, useBeacon) {
     if (!file || !file.upload || !file.upload.uuid) {
         return;
     }
-    if (file.upload.chunked === false) {
+    if (file.upload.chunked === false || file._cancelNotified) {
         return;
     }
+    file._cancelNotified = true;
 
     const formData = new FormData();
     formData.append('dzuuid', file.upload.uuid);

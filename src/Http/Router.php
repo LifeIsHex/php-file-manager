@@ -5,7 +5,7 @@
  * Author: Mahdi Hezaveh <mahdi.hezaveh@icloud.com> | Username: hezaveh
  * Filename: Router.php
  *
- * Last Modified: Tue, 18 Aug 2026 - 09:11:57 MDT (-0600)
+ * Last Modified: Tue, 18 Aug 2026 - 09:31:54 MDT (-0600)
  *
  * For the full copyright and license information, please view the LICENSE file that was distributed with this source code.
  */
@@ -191,7 +191,7 @@ class Router
     private function requirePostWithCsrf(string $action): bool
     {
         // AJAX endpoints return JSON errors
-        $ajaxActions = ['delete-multiple', 'download-multiple', 'paste', 'chmod'];
+        $ajaxActions = ['delete-multiple', 'download-multiple', 'paste', 'chmod', 'cancel-upload'];
         $isAjax = in_array($action, $ajaxActions, true);
 
         if (!$this->request->isPost()) {
@@ -379,16 +379,11 @@ class Router
         $dzuuid = (string)$this->request->post('dzuuid', '');
 
         if ($dzuuid === '') {
-            header('Content-Type: application/json', true, 400);
-            echo json_encode(['success' => false, 'message' => 'Missing dzuuid']);
-            exit;
+            Response::json(['success' => false, 'message' => 'Missing dzuuid'], 400);
         }
 
         $result = $this->fileOps->cancelChunkedUpload($dzuuid);
-
-        header('Content-Type: application/json');
-        echo json_encode($result);
-        exit;
+        Response::json($result);
     }
 
     /**
